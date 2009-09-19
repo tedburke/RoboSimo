@@ -2,7 +2,7 @@
 
 void hello(GtkWidget *widget, gpointer data)
 {
-	g_print("Hello world!\n");
+	g_print("Hello from Vaio!\n");
 }
 
 gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
