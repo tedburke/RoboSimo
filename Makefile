@@ -1,4 +1,7 @@
-all: robosimo.exe gluttest.exe
+all: robosimo.exe gluttest.exe opengltest.exe
+
+opengltest.exe: opengltest.c
+	gcc -Wall -s -O2 -mwindows -o opengltest.exe opengltest.c -lopengl32 -lglu32
 
 gluttest.exe: gluttest.o
 	gcc -o gluttest.exe gluttest.o glut32.lib -lopengl32
