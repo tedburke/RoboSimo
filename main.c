@@ -1,47 +1,62 @@
-#include <gtk/gtk.h>
+#define _STDCALL_SUPPORTED
+#define _M_IX86
+#include "GL/glut.h"
 
-void hello(GtkWidget *widget, gpointer data)
-{
-	g_print("Hello from Vaio!\n");
-}
+#include <stdio.h>
 
-gboolean delete_event(GtkWidget *widget, GdkEvent *event, gpointer data)
-{
-	g_print("delete event occurred\n");
-	return FALSE; // Do destroy the window
-}
+void display(void);
+void keyboard(unsigned char key, int x, int y);
 
-void destroy(GtkWidget *widget, gpointer data)
-{
-	gtk_main_quit();
-}
+static int window;
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
-	// These are the widgets we will use
-    GtkWidget *window;
-	GtkWidget *button;
-    
-	// Intialise GTK as usual
-    gtk_init (&argc, &argv);
-    
-	// Create and configure the window
-    window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-	g_signal_connect(G_OBJECT(window), "delete_event", G_CALLBACK(delete_event), NULL);
-	g_signal_connect(G_OBJECT(window), "destroy", G_CALLBACK(destroy), NULL);
-	gtk_container_set_border_width(GTK_CONTAINER(window), 10);
+	// Start GLUT
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE);
+	glutInitWindowSize(640,400);
+	glutInitWindowPosition(100,100);
 	
-	// Create the button and add it to the window
-	button = gtk_button_new_with_label("Hello world!");
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(hello), NULL);	
-	gtk_container_add(GTK_CONTAINER(window), button);
+	// glutFullScreen();
 	
-	// Show all widgets
-	gtk_widget_show  (button);
-	gtk_widget_show  (window);
-    
-	// Enter the main GTK event loop
-    gtk_main ();
-    
-    return 0;
+	window = glutCreateWindow("RoboSimo");
+	
+	glutKeyboardFunc(keyboard);
+	glutDisplayFunc(display);
+	
+	glClearColor(0, 0, 0, 0);
+	
+	glutMainLoop();
+	
+	printf("Exited GLUT main loop - program closing\n");
+	return 0;
+}
+
+void display()
+{
+	// do  a clearscreen
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	// draw something
+
+	glutWireTeapot(0.5);
+	// glutSolidTeapot(0.5);
+	// glutWireSphere(0.5,100,100);
+	// glutSolidSphere(0.5,100,100);
+	// glutWireTorus(0.3,0.5,100,100);
+	// glutSolidTorus(0.3,0.5,100,100);
+	// glutWireIcosahedron();
+	// glutSolidIcosahedron();
+	// glutWireDodecahedron();
+	// glutSolidDodecahedron();
+	// glutWireCone(0.5,0.5,100,100);
+	// glutSolidCone(0.5,0.5,100,100);
+	// glutWireCube(0.5);
+	// glutSolidCube(0.5);
+}
+
+void keyboard(unsigned char key, int x, int y)
+{
+	printf("Pressed key %c on coordinates %d,%d\n", key, x, y);
+	if (key == 'q') glutDestroyWindow(window);
 }

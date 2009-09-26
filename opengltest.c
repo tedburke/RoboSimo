@@ -6,133 +6,163 @@
  *		Visit My Site At nehe.gamedev.net
  */
  
- // Modified by Ted Burke to compile with MinGW on 23-9-2009
+// Modified by Ted Burke to compile with MinGW on 23-9-2009
+// Additional changes made on 26-9-2009 to make more concise
 
 #include <windows.h>		// Header File For Windows
 #include <gl\gl.h>			// Header File For The OpenGL32 Library
 #include <gl\glu.h>			// Header File For The GLu32 Library
 
-HDC			hDC=NULL;		// Private GDI Device Context
-HGLRC		hRC=NULL;		// Permanent Rendering Context
-HWND		hWnd=NULL;		// Holds Our Window Handle
-HINSTANCE	hInstance;		// Holds The Instance Of The Application
+HDC hDC=NULL; // Private GDI Device Context
+HGLRC hRC=NULL; // Permanent Rendering Context
+HWND hWnd=NULL; // Holds Our Window Handle
+HINSTANCE hInstance; // Holds The Instance Of The Application
 
-int	keys[256];			// Array Used For The Keyboard Routine
-int	active=TRUE;		// Window Active Flag Set To TRUE By Default
-int	fullscreen=TRUE;	// Fullscreen Flag Set To Fullscreen Mode By Default
+int	keys[256]; // Array Used For The Keyboard Routine
+int	active=TRUE; // Window Active Flag Set To TRUE By Default
+int	fullscreen=TRUE; // Fullscreen Flag Set To Fullscreen Mode By Default
 
-GLfloat	rtri;				// Angle For The Triangle ( NEW )
-GLfloat	rquad;				// Angle For The Quad ( NEW )
+GLfloat	rtri; // Angle For The Triangle ( NEW )
+GLfloat	rquad; // Angle For The Quad ( NEW )
 
-LRESULT	CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);	// Declaration For WndProc
-
-GLvoid ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
+// Message handler function
+LRESULT CALLBACK WndProc(HWND hWnd,	UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	if (height==0)										// Prevent A Divide By Zero By
+	switch (uMsg)
 	{
-		height=1;										// Making Height Equal One
+	case WM_ACTIVATE: // Watch For Window Activate Message
+		if (!HIWORD(wParam)) active=TRUE; // Program Is Active
+		else active=FALSE; // Program Is No Longer Active
+		return 0;
+	case WM_SYSCOMMAND:	// Intercept System Commands
+		switch (wParam) // Check System Calls
+		{
+			case SC_SCREENSAVE: // Screensaver Trying To Start?
+			case SC_MONITORPOWER: // Monitor Trying To Enter Powersave?
+			return 0; // Prevent From Happening
+		}
+		break;
+	case WM_CLOSE: // Did We Receive A Close Message?
+		PostQuitMessage(0); // Send A Quit Message
+		return 0;
+	case WM_KEYDOWN: // Is A Key Being Held Down?
+		keys[wParam] = TRUE; // If So, Mark It As TRUE
+		return 0;
+	case WM_KEYUP: // Has A Key Been Released?
+		keys[wParam] = FALSE; // If So, Mark It As FALSE
+		return 0;
+	case WM_SIZE: // Resize The OpenGL Window
+		ReSizeGLScene(LOWORD(lParam),HIWORD(lParam)); // LoWord=Width, HiWord=Height
+		return 0;
 	}
 
-	glViewport(0,0,width,height);						// Reset The Current Viewport
+	// Pass All Unhandled Messages To DefWindowProc
+	return DefWindowProc(hWnd,uMsg,wParam,lParam);
+}
 
-	glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
-	glLoadIdentity();									// Reset The Projection Matrix
+GLvoid ReSizeGLScene(GLsizei width, GLsizei height) // Resize And Initialize The GL Window
+{
+	if (height==0) height=1; // Prevent divide by zero
+
+	glViewport(0,0,width,height); // Reset The Current Viewport
+
+	glMatrixMode(GL_PROJECTION); // Select The Projection Matrix
+	glLoadIdentity(); // Reset The Projection Matrix
 
 	// Calculate The Aspect Ratio Of The Window
 	gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
 
-	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
-	glLoadIdentity();									// Reset The Modelview Matrix
+	glMatrixMode(GL_MODELVIEW); // Select The Modelview Matrix
+	glLoadIdentity(); // Reset The Modelview Matrix
 }
 
-int InitGL(GLvoid)										// All Setup For OpenGL Goes Here
+int InitGL(GLvoid) // All Setup For OpenGL Goes Here
 {
-	glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
-	glClearColor(0.0f, 0.0f, 0.0f, 0.5f);				// Black Background
-	glClearDepth(1.0f);									// Depth Buffer Setup
-	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
-	glDepthFunc(GL_LEQUAL);								// The Type Of Depth Testing To Do
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
-	return TRUE;										// Initialization Went OK
+	glShadeModel(GL_SMOOTH); // Enable Smooth Shading
+	glClearColor(0.0f, 0.0f, 0.0f, 0.5f); // Black Background
+	glClearDepth(1.0f); // Depth Buffer Setup
+	glEnable(GL_DEPTH_TEST); // Enables Depth Testing
+	glDepthFunc(GL_LEQUAL); // The Type Of Depth Testing To Do
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // Really Nice Perspective Calculations
+	return TRUE; // Initialization Went OK
 }
 
-int DrawGLScene(GLvoid)									// Here's Where We Do All The Drawing
+int DrawGLScene(GLvoid) // Here's Where We Do All The Drawing
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	// Clear Screen And Depth Buffer
-	glLoadIdentity();									// Reset The Current Modelview Matrix
-	glTranslatef(-1.5f,0.0f,-6.0f);						// Move Left 1.5 Units And Into The Screen 6.0
-	glRotatef(rtri,0.0f,1.0f,0.0f);						// Rotate The Triangle On The Y axis ( NEW )
-	glBegin(GL_TRIANGLES);								// Start Drawing A Triangle
-		glColor3f(1.0f,0.0f,0.0f);						// Set Top Point Of Triangle To Red
-		glVertex3f( 0.0f, 1.0f, 0.0f);					// First Point Of The Triangle
-		glColor3f(0.0f,1.0f,0.0f);						// Set Left Point Of Triangle To Green
-		glVertex3f(-1.0f,-1.0f, 0.0f);					// Second Point Of The Triangle
-		glColor3f(0.0f,0.0f,1.0f);						// Set Right Point Of Triangle To Blue
-		glVertex3f( 1.0f,-1.0f, 0.0f);					// Third Point Of The Triangle
-	glEnd();											// Done Drawing The Triangle
-	glLoadIdentity();									// Reset The Current Modelview Matrix
-	glTranslatef(1.5f,0.0f,-6.0f);						// Move Right 1.5 Units And Into The Screen 6.0
-	glRotatef(rquad,1.0f,0.0f,0.0f);					// Rotate The Quad On The X axis ( NEW )
-	glColor3f(0.5f,0.5f,1.0f);							// Set The Color To Blue One Time Only
-	glBegin(GL_QUADS);									// Draw A Quad
-		glVertex3f(-1.0f, 1.0f, 0.0f);					// Top Left
-		glVertex3f( 1.0f, 1.0f, 0.0f);					// Top Right
-		glVertex3f( 1.0f,-1.0f, 0.0f);					// Bottom Right
-		glVertex3f(-1.0f,-1.0f, 0.0f);					// Bottom Left
-	glEnd();											// Done Drawing The Quad
-	rtri+=0.2f;											// Increase The Rotation Variable For The Triangle ( NEW )
-	rquad-=0.15f;										// Decrease The Rotation Variable For The Quad ( NEW )
-	return TRUE;										// Keep Going
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear Screen And Depth Buffer
+	glLoadIdentity(); // Reset The Current Modelview Matrix
+	glTranslatef(-1.5f,0.0f,-6.0f); // Move Left 1.5 Units And Into The Screen 6.0
+	glRotatef(rtri,0.0f,1.0f,0.0f); // Rotate The Triangle On The Y axis ( NEW )
+	glBegin(GL_TRIANGLES);
+		glColor3f(1.0f,0.0f,0.0f);
+		glVertex3f( 0.0f, 1.0f, 0.0f);
+		glColor3f(0.0f,1.0f,0.0f);
+		glVertex3f(-1.0f,-1.0f, 0.0f);
+		glColor3f(0.0f,0.0f,1.0f);
+		glVertex3f( 1.0f,-1.0f, 0.0f);
+	glEnd();
+	glLoadIdentity(); // Reset The Current Modelview Matrix
+	glTranslatef(1.5f,0.0f,-6.0f); // Move Right 1.5 Units And Into The Screen 6.0
+	glRotatef(rquad,1.0f,0.0f,0.0f); // Rotate The Quad On The X axis ( NEW )
+	glColor3f(0.5f,0.5f,1.0f); // Set The Color To Blue One Time Only
+	glBegin(GL_QUADS);
+		glVertex3f(-1.0f, 1.0f, 0.0f);
+		glVertex3f( 1.0f, 1.0f, 0.0f);
+		glVertex3f( 1.0f,-1.0f, 0.0f);
+		glVertex3f(-1.0f,-1.0f, 0.0f);
+	glEnd();
+	rtri+=0.2f; // Increase The Rotation Variable For The Triangle ( NEW )
+	rquad-=0.15f; // Decrease The Rotation Variable For The Quad ( NEW )
+	return TRUE; // Keep Going
 }
 
-GLvoid KillGLWindow(GLvoid)								// Properly Kill The Window
+GLvoid KillGLWindow(GLvoid) // Properly Kill The Window
 {
-	if (fullscreen)										// Are We In Fullscreen Mode?
+	if (fullscreen)
 	{
-		ChangeDisplaySettings(NULL,0);					// If So Switch Back To The Desktop
-		ShowCursor(TRUE);								// Show Mouse Pointer
+		ChangeDisplaySettings(NULL,0); // If fullscreen, switch Back To The Desktop
+		ShowCursor(TRUE); // Show Mouse Pointer
 	}
 
-	if (hRC)											// Do We Have A Rendering Context?
+	if (hRC) // Do We Have A Rendering Context?
 	{
-		if (!wglMakeCurrent(NULL,NULL))					// Are We Able To Release The DC And RC Contexts?
+		if (!wglMakeCurrent(NULL,NULL)) // Are We Able To Release The DC And RC Contexts?
 		{
 			MessageBox(NULL,"Release Of DC And RC Failed.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
 		}
 
-		if (!wglDeleteContext(hRC))						// Are We Able To Delete The RC?
+		if (!wglDeleteContext(hRC)) // Are We Able To Delete The RC?
 		{
 			MessageBox(NULL,"Release Rendering Context Failed.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
 		}
-		hRC=NULL;										// Set RC To NULL
+		hRC=NULL;
 	}
 
-	if (hDC && !ReleaseDC(hWnd,hDC))					// Are We Able To Release The DC
+	if (hDC && !ReleaseDC(hWnd,hDC)) // Are We Able To Release The DC?
 	{
 		MessageBox(NULL,"Release Device Context Failed.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
-		hDC=NULL;										// Set DC To NULL
+		hDC=NULL;
 	}
 
-	if (hWnd && !DestroyWindow(hWnd))					// Are We Able To Destroy The Window?
+	if (hWnd && !DestroyWindow(hWnd)) // Are We Able To Destroy The Window?
 	{
 		MessageBox(NULL,"Could Not Release hWnd.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
-		hWnd=NULL;										// Set hWnd To NULL
+		hWnd=NULL;
 	}
 
-	if (!UnregisterClass("OpenGL",hInstance))			// Are We Able To Unregister Class
+	if (!UnregisterClass("OpenGL", hInstance)) // Are We Able To Unregister Class
 	{
 		MessageBox(NULL,"Could Not Unregister Class.","SHUTDOWN ERROR",MB_OK | MB_ICONINFORMATION);
-		hInstance=NULL;									// Set hInstance To NULL
+		hInstance=NULL;
 	}
 }
 
-/*	This Code Creates Our OpenGL Window.  Parameters Are:					*
- *	title			- Title To Appear At The Top Of The Window				*
- *	width			- Width Of The GL Window Or Fullscreen Mode				*
- *	height			- Height Of The GL Window Or Fullscreen Mode			*
- *	bits			- Number Of Bits To Use For Color (8/16/24/32)			*
- *	fullscreenflag	- Use Fullscreen Mode (TRUE) Or Windowed Mode (FALSE)	*/
- 
+//	This Code Creates Our OpenGL Window.  Parameters Are:
+//	title			- Title To Appear At The Top Of The Window
+//	width			- Width Of The GL Window Or Fullscreen Mode
+//	height			- Height Of The GL Window Or Fullscreen Mode
+//	bits			- Number Of Bits To Use For Color (8/16/24/32)
+//	fullscreenflag	- Use Fullscreen Mode (TRUE) Or Windowed Mode (FALSE)
 BOOL CreateGLWindow(char* title, int width, int height, int bits, int fullscreenflag)
 {
 	GLuint		PixelFormat;			// Holds The Results After Searching For A Match
@@ -298,66 +328,6 @@ BOOL CreateGLWindow(char* title, int width, int height, int bits, int fullscreen
 	return TRUE;									// Success
 }
 
-LRESULT CALLBACK WndProc(	HWND	hWnd,			// Handle For This Window
-							UINT	uMsg,			// Message For This Window
-							WPARAM	wParam,			// Additional Message Information
-							LPARAM	lParam)			// Additional Message Information
-{
-	switch (uMsg)									// Check For Windows Messages
-	{
-		case WM_ACTIVATE:							// Watch For Window Activate Message
-		{
-			if (!HIWORD(wParam))					// Check Minimization State
-			{
-				active=TRUE;						// Program Is Active
-			}
-			else
-			{
-				active=FALSE;						// Program Is No Longer Active
-			}
-
-			return 0;								// Return To The Message Loop
-		}
-
-		case WM_SYSCOMMAND:							// Intercept System Commands
-		{
-			switch (wParam)							// Check System Calls
-			{
-				case SC_SCREENSAVE:					// Screensaver Trying To Start?
-				case SC_MONITORPOWER:				// Monitor Trying To Enter Powersave?
-				return 0;							// Prevent From Happening
-			}
-			break;									// Exit
-		}
-
-		case WM_CLOSE:								// Did We Receive A Close Message?
-		{
-			PostQuitMessage(0);						// Send A Quit Message
-			return 0;								// Jump Back
-		}
-
-		case WM_KEYDOWN:							// Is A Key Being Held Down?
-		{
-			keys[wParam] = TRUE;					// If So, Mark It As TRUE
-			return 0;								// Jump Back
-		}
-
-		case WM_KEYUP:								// Has A Key Been Released?
-		{
-			keys[wParam] = FALSE;					// If So, Mark It As FALSE
-			return 0;								// Jump Back
-		}
-
-		case WM_SIZE:								// Resize The OpenGL Window
-		{
-			ReSizeGLScene(LOWORD(lParam),HIWORD(lParam));  // LoWord=Width, HiWord=Height
-			return 0;								// Jump Back
-		}
-	}
-
-	// Pass All Unhandled Messages To DefWindowProc
-	return DefWindowProc(hWnd,uMsg,wParam,lParam);
-}
 
 int WINAPI WinMain(	HINSTANCE	hInstance,			// Instance
 					HINSTANCE	hPrevInstance,		// Previous Instance
