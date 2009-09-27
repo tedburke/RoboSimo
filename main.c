@@ -5,11 +5,10 @@
 // the network and control a virtual robot within the
 // simulated environment.
 //
-//
 
 #define _STDCALL_SUPPORTED
 #define _M_IX86
-#include "GL/glut.h"
+#include "glut.h"
 
 #include <stdio.h>
 
