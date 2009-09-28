@@ -1,3 +1,9 @@
+//
+// socks.c - Ted Burke - 27-9-2009
+//
+// This file contains the network communication thread function for RoboSimo
+//
+
 #include <Winsock2.h>
 #include <stdio.h>
 
@@ -102,31 +108,33 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 						if (result == -1)
 						perror("recv");
 						else
-						//printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
-						if (buffer[0] == 'f')
 						{
-							robot[0].v1 = 0.25;
-							robot[0].v2 = 0.25;
-						}
-						else if (buffer[0] == 'b')
-						{
-							robot[0].v1 = -0.25;
-							robot[0].v2 = -0.25;
-						}
-						else if (buffer[0] == 'l')
-						{
-							robot[0].v1 = -0.25;
-							robot[0].v2 = 0.25;
-						}
-						else if (buffer[0] == 'r')
-						{
-							robot[0].v1 = 0.25;
-							robot[0].v2 = -0.25;
-						}
-						else if (buffer[0] == 's')
-						{
-							robot[0].v1 = 0;
-							robot[0].v2 = 0;
+							//printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
+							if (buffer[0] == 'f')
+							{
+								robot[0].v1 = 0.25;
+								robot[0].v2 = 0.25;
+							}
+							else if (buffer[0] == 'b')
+							{
+								robot[0].v1 = -0.25;
+								robot[0].v2 = -0.25;
+							}
+							else if (buffer[0] == 'l')
+							{
+								robot[0].v1 = -0.25;
+								robot[0].v2 = 0.25;
+							}
+							else if (buffer[0] == 'r')
+							{
+								robot[0].v1 = 0.25;
+								robot[0].v2 = -0.25;
+							}
+							else if (buffer[0] == 's')
+							{
+								robot[0].v1 = 0;
+								robot[0].v2 = 0;
+							}
 						}
 					}
 				}
