@@ -9,7 +9,8 @@
 
 #include "shared.h"
 
-#define D_PORT 4344
+//#define D_PORT 4344
+#define D_PORT 4009
 //#define D_HOST "computer"
 //#define D_HOST "localhost"
 //#define D_HOST "DUBLIN-B4541FCD" // receive incoming connections from other computers
@@ -112,30 +113,52 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 						else
 						{
 							//printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
-							if (buffer[0] == 'f')
+							if (buffer[0] == 27)
 							{
-								robot[0].v1 = 0.25;
-								robot[0].v2 = 0.25;
+								// An arrow key was pressed.
+								// These keys generate a 3-byte code.
+								switch(buffer[2])
+								{
+								case 'A': // Up arrow key
+									robot[0].v1 = 0.25;
+									robot[0].v2 = 0.25;
+									break;
+								case 'B': // Down arrow key
+									robot[0].v1 = -0.25;
+									robot[0].v2 = -0.25;
+									break;
+								case 'C': // Right arrow key
+									robot[0].v1 = 0.25;
+									robot[0].v2 = -0.25;
+									break;
+								case 'D': // Left arrow key
+									robot[0].v1 = -0.25;
+									robot[0].v2 = 0.25;
+									break;
+								}
 							}
-							else if (buffer[0] == 'b')
+							else
 							{
-								robot[0].v1 = -0.25;
-								robot[0].v2 = -0.25;
-							}
-							else if (buffer[0] == 'l')
-							{
-								robot[0].v1 = -0.25;
-								robot[0].v2 = 0.25;
-							}
-							else if (buffer[0] == 'r')
-							{
-								robot[0].v1 = 0.25;
-								robot[0].v2 = -0.25;
-							}
-							else if (buffer[0] == 's')
-							{
-								robot[0].v1 = 0;
-								robot[0].v2 = 0;
+								switch(buffer[0])
+								{
+								case 'f':
+									robot[0].v1 = 0.25;
+									robot[0].v2 = 0.25;
+									break;
+								case 'b':
+									robot[0].v1 = -0.25;
+									robot[0].v2 = -0.25;
+									break;
+								case 'r':
+									robot[0].v1 = 0.25;
+									robot[0].v2 = -0.25;
+									break;
+								case ' ':
+								case 's':
+									robot[0].v1 = 0;
+									robot[0].v2 = 0;
+									break;
+								}
 							}
 						}
 					}

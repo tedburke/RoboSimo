@@ -138,7 +138,7 @@ void update()
 		else
 		{
 			// Calculate updated orientation from new wheel positions
-			robot[n].angle = (pi/2.0) + atan((y2-y1)/(x2-x1));
+			robot[n].angle = (pi/2.0) + atan2(y2-y1, x2-x1);
 		}
 	}
 	
