@@ -102,7 +102,7 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 						if (result == -1)
 						perror("recv");
 						else
-						printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
+						//printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
 						if (buffer[0] == 'f')
 						{
 							robot[0].v1 = 0.25;

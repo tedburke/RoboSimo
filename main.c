@@ -6,37 +6,33 @@
 // simulated environment.
 //
 
+// Header files
 #include <windows.h>
-
-#define _STDCALL_SUPPORTED
-//#define _M_IX86
-#include "glut.h"
-
-#include <GL/glu.h>
-
 #include <stdio.h>
 #include <time.h>
+#include <GL/glu.h>
+#include "glut.h"
 
+// My header files
 #include "shared.h"
 
+// GLUT callback functions
 void update(void);
 void display(void);
 void reshape(int, int);
 void keyboard(unsigned char key, int x, int y);
 
+// Define the value of pi
 const double pi = 3.14159;
 
-// Remember when the scene was last updated
+// Remember when the scene was last updated (in clock ticks)
 clock_t last_time;
 
-// Window handle
+// GLUT window identifier
 static int window;
 
 // Global flags
 int fullscreen = 0; // to be set to 1 for fullscreen mode
-
-// For counting calls to display function during debugging
-static int counter = 0;
 
 // definition for network thread function
 extern DWORD WINAPI network_thread(LPVOID);
@@ -133,7 +129,7 @@ void update()
 		robot[n].x = (x1 + x2)/2.0;
 		robot[n].y = (y1 + y2)/2.0;
 		
-		if (x2-x1 < 0.01)
+		if (x2 == x1)
 		{
 			// robot pointing (close to) straight up or down
 			if (y2 < y1) robot[n].angle = 0;
@@ -164,15 +160,10 @@ void reshape(int width, int height)
 
 void display()
 {
-	int n;
-	
-	// Print a message to the console
-	printf("In display function, counter = %d\n", counter++);
-	
 	// Clear the background
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	// draw something
+	// Draw arena
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	GLUquadricObj *pQuad;
@@ -184,6 +175,7 @@ void display()
 	gluDeleteQuadric(pQuad);
 
 	// Draw robots
+	int n;
 	for (n=0 ; n<2 ; ++n)
 	{
 		if (n==0) glColor3d(1,0,0);
@@ -195,31 +187,13 @@ void display()
 		glutSolidCube(1.0);
 	}
 
-	//glutWireTeapot(0.5);
-	// glutSolidTeapot(0.5);
-	// glutWireSphere(0.5,100,100);
-	// glutSolidSphere(0.5,100,100);
-	// glutWireTorus(0.3,0.5,100,100);
-	// glutSolidTorus(0.3,0.5,100,100);
-	// glutWireIcosahedron();
-	// glutSolidIcosahedron();
-	// glutWireDodecahedron();
-	// glutSolidDodecahedron();
-	// glutWireCone(0.5,0.5,100,100);
-	// glutSolidCone(0.5,0.5,100,100);
-	// glutWireCube(0.5);
-	// glutSolidCube(0.5);
-	
-	// Trigger the next draw straight away, so that scene
-	// will keep updating.
-	
 	// Swap back buffer to screen
 	glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int x, int y)
 {
-	printf("Pressed key %c on coordinates %d,%d\n", key, x, y);
+	//printf("Pressed key %c on coordinates %d,%d\n", key, x, y);
 	
 	if (key == 'q') program_exiting = 1; // Set exiting flag
 }
