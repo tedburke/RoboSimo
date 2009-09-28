@@ -1,7 +1,7 @@
 //
 // socks.c - Ted Burke - 27-9-2009
 //
-// This file contains the network communication thread function for RoboSimo
+// This file contains the network communication thread function for RoboSimo.
 //
 
 #include <Winsock2.h>
@@ -10,7 +10,7 @@
 #include "shared.h"
 
 #define D_PORT 4344
-#define D_HOST "computer"
+//#define D_HOST "computer"
 //#define D_HOST "localhost"
 //#define D_HOST "DUBLIN-B4541FCD" // receive incoming connections from other computers
 #define D_QUEUE 32
@@ -25,26 +25,28 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	unsigned int descriptor;
 	int result;
 	int index;
-	int cycle = 0;
+	//int cycle = 0;
 	unsigned int sockets[D_SOCKETS];
 	int sockets_index = 0;
 	unsigned int maximun;
 	char buffer[D_INFO];
 	fd_set input;
-	
-	// My index
-	int n;
-	unsigned char *a; // Used for printing IP addresses
 		
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	
 	descriptor = socket(PF_INET, SOCK_STREAM, 0); // create a socket
-	memset(&addr, 0, sizeof(addr)); // get information about the host
-	host = gethostbyname(D_HOST); // NULL if error
-	printf("h_length = %d\n", host->h_length);
+	
+	// get information about the host
+	char hostname[50];
+	result = gethostname(hostname, 50);
+	memset(&addr, 0, sizeof(addr));
+	host = gethostbyname(hostname); // NULL if error
+	printf("Host name: %s\n", hostname);
+	//printf("h_length = %d\n", host->h_length);
+	unsigned char *a; // Used for printing IP addresses
 	a = (unsigned char *)host->h_addr_list[0];
-	printf("Host address %d: %u.%u.%u.%u\n", n, a[0], a[1], a[2], a[3]);
+	printf("Host address: %u.%u.%u.%u\n", a[0], a[1], a[2], a[3]);
 	
 	// bind the socket to an address and port
 	memcpy(&addr.sin_addr, host->h_addr_list[0], sizeof(host->h_addr_list[0]));
@@ -141,7 +143,7 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 			}
 		}
 		
-		printf("%d\r", cycle++);
+		//printf("%d\r", cycle++);
 	}
 	
 	for (result = 0; result < sockets_index; result++)
