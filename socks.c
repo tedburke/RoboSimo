@@ -1,6 +1,8 @@
 #include <Winsock2.h>
 #include <stdio.h>
 
+#include "shared.h"
+
 #define D_PORT 4344
 #define D_HOST "computer"
 //#define D_HOST "localhost"
@@ -9,7 +11,7 @@
 #define D_SOCKETS 16
 #define D_INFO 256
 
-int main(int argc, char **argv)
+DWORD WINAPI network_thread(LPVOID lpParameter)
 {
 	struct timeval tv;
 	struct sockaddr_in addr;
@@ -27,10 +29,7 @@ int main(int argc, char **argv)
 	// My index
 	int n;
 	unsigned char *a; // Used for printing IP addresses
-	
-	// read the delay if any
-	if (argc > 1) delay = atol(argv[1]);
-	
+		
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	
@@ -52,7 +51,7 @@ int main(int argc, char **argv)
 	maximun = descriptor;
 	
 	result = 0;
-	while (result != -1)
+	while (program_exiting == 0)
 	{
 		FD_ZERO(&input);
 		FD_SET(descriptor, &input);
@@ -104,6 +103,31 @@ int main(int argc, char **argv)
 						perror("recv");
 						else
 						printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
+						if (buffer[0] == 'f')
+						{
+							robot[0].v1 = 0.25;
+							robot[0].v2 = 0.25;
+						}
+						else if (buffer[0] == 'b')
+						{
+							robot[0].v1 = -0.25;
+							robot[0].v2 = -0.25;
+						}
+						else if (buffer[0] == 'l')
+						{
+							robot[0].v1 = -0.25;
+							robot[0].v2 = 0.25;
+						}
+						else if (buffer[0] == 'r')
+						{
+							robot[0].v1 = 0.25;
+							robot[0].v2 = -0.25;
+						}
+						else if (buffer[0] == 's')
+						{
+							robot[0].v1 = 0;
+							robot[0].v2 = 0;
+						}
 					}
 				}
 			}
