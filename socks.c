@@ -9,14 +9,14 @@
 
 #include "shared.h"
 
-//#define D_PORT 4344
 #define D_PORT 4009
-//#define D_HOST "computer"
-//#define D_HOST "localhost"
-//#define D_HOST "DUBLIN-B4541FCD" // receive incoming connections from other computers
 #define D_QUEUE 32
 #define D_SOCKETS 16
 #define D_INFO 256
+
+// This string will be set to the network address
+// info to be displayed on the screen.
+char network_address_display_string[100] = "Checking network address...";
 
 DWORD WINAPI network_thread(LPVOID lpParameter)
 {
@@ -43,11 +43,12 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	result = gethostname(hostname, 50);
 	memset(&addr, 0, sizeof(addr));
 	host = gethostbyname(hostname); // NULL if error
-	printf("Host name: %s\n", hostname);
-	//printf("h_length = %d\n", host->h_length);
+	
+	// Create a string that will be used to display the
+	// computer's network address info on the screen.
 	unsigned char *a; // Used for printing IP addresses
 	a = (unsigned char *)host->h_addr_list[0];
-	printf("Host address: %u.%u.%u.%u\n", a[0], a[1], a[2], a[3]);
+	sprintf(network_address_display_string, "  IP Address: %u.%u.%u.%u, Port: %d", a[0], a[1], a[2], a[3], D_PORT);
 	
 	// bind the socket to an address and port
 	memcpy(&addr.sin_addr, host->h_addr_list[0], sizeof(host->h_addr_list[0]));
@@ -178,7 +179,7 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	closesocket(descriptor);
 	WSACleanup();
 	
-	printf("Exiting\n");
+	//printf("Exiting\n");
 	
 	return (0);
 }

@@ -38,6 +38,14 @@ int fullscreen = 0; // to be set to 1 for fullscreen mode
 extern DWORD WINAPI network_thread(LPVOID);
 HANDLE hNetworkThread;
 
+// This string will be set to the network address
+// info to be displayed on the screen.
+extern char network_address_display_string[];
+double x_networkAddressText, y_networkAddressText;
+
+// Text rendering function prototype
+void renderBitmapString(float, float, float, void *, char *);
+
 int main(int argc, char **argv)
 {
 	int n;
@@ -146,16 +154,38 @@ void update()
 	glutPostRedisplay();
 }
 
-void reshape(int width, int height)
+void reshape(int window_width, int window_height)
 {
+	int text_bar_height = 25;
+	double scene_width, scene_height;
+	double left, right, bottom, top;
+	
 	// Set viewport to new window size
-	glViewport(0,0,width,height);
+	glViewport(0,0,window_width,window_height);
 	
 	// Set up OpenGL projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	if (width > height) gluOrtho2D(-0.7*(width/(double)height),0.7*(width/(double)height),-0.7,0.7);
-	else gluOrtho2D(-0.7,0.7,-0.7*(height/(double)width),0.7*(height/(double)width));
+	if (window_width > window_height - text_bar_height)
+	{
+		top = 0.7;
+		bottom = -0.7 * (window_height + 2.0*text_bar_height) / (double)window_height;
+		right = 0.7 * (window_width/(double)(window_height-text_bar_height));
+		left = -right;
+	}
+	else
+	{
+		right = 0.7;
+		left = -right;
+		top = 0.7*((window_height-text_bar_height)/(double)window_width);
+		bottom = -top * (window_height + 2.0*text_bar_height) / (double)window_height;
+	}
+	
+	gluOrtho2D(left,right,bottom,top);
+	
+	// Update position of network address text
+	x_networkAddressText = left; // NB string starts with a couple of spaces, so ok to place at left edge
+	y_networkAddressText = -0.7;
 }
 
 void display()
@@ -186,6 +216,12 @@ void display()
 		glScaled(robot[n].l,robot[n].w,robot[n].h);
 		glutSolidCube(1.0);
 	}
+	
+	// Draw text information
+	glColor3f(0, 0, 0);
+	glLoadIdentity();
+	renderBitmapString(x_networkAddressText, y_networkAddressText, 0.0,
+		GLUT_BITMAP_HELVETICA_18, network_address_display_string);
 
 	// Swap back buffer to screen
 	glutSwapBuffers();
@@ -196,4 +232,20 @@ void keyboard(unsigned char key, int x, int y)
 	//printf("Pressed key %c on coordinates %d,%d\n", key, x, y);
 	
 	if (key == 'q') program_exiting = 1; // Set exiting flag
+}
+
+// This function renders a string (some text) on the screen at a specified position
+void renderBitmapString(float x, float y, float z, void *font, char *text)
+{
+	// Variable to count through the string's character
+	int n = 0;
+	
+	// Print the characters of the string one by one
+	glRasterPos3f(x, y, z);
+	while(text[n] != '\0')
+	{
+		// Render a character
+		glutBitmapCharacter(font, text[n]);
+		n = n + 1;
+	}
 }
