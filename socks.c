@@ -59,7 +59,9 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	{
 		iResult = getaddrinfo(NULL, DEFAULT_PORT_2, &hints, &result);
 	}
-	if ( iResult != 0 ) {
+	
+	if (iResult != 0)
+	{
 		printf("getaddrinfo failed: %d\n", iResult);
 		WSACleanup();
 		return 1;
@@ -74,7 +76,8 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	{
 		struct in_addr addr;
 		memcpy(&addr, phe->h_addr_list[i], sizeof(struct in_addr));
-		sprintf(network_address_display_string, "   %s : %s, %s", inet_ntoa(addr), DEFAULT_PORT_1, DEFAULT_PORT_2);
+		sprintf(network_address_display_string, "   IP Address: %s, Ports: %s, %s",
+					inet_ntoa(addr), DEFAULT_PORT_1, DEFAULT_PORT_2);
 	}
 	
 	// Create a SOCKET for connecting to server

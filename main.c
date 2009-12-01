@@ -34,6 +34,12 @@ static int window;
 // Global flags
 int fullscreen = 0; // to be set to 1 for fullscreen mode
 
+// Global identifier for arean floor texture
+static GLuint texName;
+#define texImageWidth 64
+#define texImageHeight 64
+static GLubyte texImage[texImageHeight][texImageWidth][4];
+
 // definition for network thread function
 int p1 = 1;
 int p2 = 2;
@@ -71,6 +77,26 @@ int main(int argc, char **argv)
 	
 	// Set the background colour to green
 	glClearColor(0, 1, 0, 0);
+	
+	// Load bitmap texture for arena floor
+	// LOAD IMAGE FROM FILE
+	int x, y;
+	for (y = 0 ; y < texImageHeight ; ++y)
+	{
+		for (x = 0 ; x < texImageWidth ; ++x)
+		{
+			
+		}
+	}
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glGenTextures(1, &texName);
+	glBindTexture(GL_TEXTURE_2D, texName);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texImageWidth, texImageHeight,
+					0, GL_RGBA, GL_UNSIGNED_BYTE, texImage);
 	
 	// Initialise robots' states
 	for (n=0 ; n<2 ; ++n)
@@ -212,6 +238,21 @@ void display()
 	glColor3d(0,0,0);
 	gluDisk(pQuad, 0, 0.5, 36, 2);
 	gluDeleteQuadric(pQuad);
+	
+	// Render bitmap on arena floor
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture (GL_TEXTURE_2D, bitmap_number);
+	glBegin (GL_QUADS);
+	glTexCoord2f (0.0, 0.0);
+	glVertex3f (-1.0, -1.0, 0.0);
+	glTexCoord2f (1.0, 0.0);
+	glVertex3f (1.0, -1.0, 0.0);
+	glTexCoord2f (1.0, 1.0);
+	glVertex3f (1.0, 1.0, 0.0);
+	glTexCoord2f (0.0, 1.0);
+	glVertex3f (-1.0, 1.0, 0.0);
+	glEnd ();
+	glDisable(GL_TEXTURE_2D);
 
 	// Draw robots
 	int n;
