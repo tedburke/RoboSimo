@@ -91,8 +91,8 @@ int main(int argc, char **argv)
 	robot[1].angle = pi;
 
 	// Launch network threads (one for each player, ports 4009 and 4010)
-	hNetworkThread1 = CreateThread(NULL, 0, network_thread, NULL, 0, (LPVOID)(&p1));
-	hNetworkThread2 = CreateThread(NULL, 0, network_thread, NULL, 0, (LPVOID)(&p2));
+	hNetworkThread1 = CreateThread(NULL, 0, network_thread, (LPVOID)(&p1), 0, NULL);
+	hNetworkThread2 = CreateThread(NULL, 0, network_thread, (LPVOID)(&p2), 0, NULL);
 	
 	// Enter the main event loop
 	glutMainLoop();
@@ -132,8 +132,8 @@ void update()
 	for (n=0 ; n<2 ; ++n)
 	{
 		// Update wheel velocities
-		robot[n].v1 = ((robot[n].LATD & 0x02)-(robot[n].LATD & 0x01)) * (robot[n].CCPR1L / 1000.0);
-		robot[n].v2 = ((robot[n].LATD & 0x04)-(robot[n].LATD & 0x03)) * (robot[n].CCPR2L / 1000.0);
+		robot[n].v1 = ((robot[n].LATD & 0x02)-(robot[n].LATD & 0x01)) * 0.25;//(robot[n].CCPR1L / 1000.0);
+		robot[n].v2 = ((robot[n].LATD & 0x04)-(robot[n].LATD & 0x03)) * 0.25;//(robot[n].CCPR2L / 1000.0);
 		
 		// Left wheel position: x1, y1. Left wheel velocity: v1.
 		// Right wheel position: x2, y2. Left wheel velocity: v2.
@@ -230,7 +230,7 @@ void display()
 	glColor3f(0, 0, 0);
 	glLoadIdentity();
 	renderBitmapString(x_networkAddressText, y_networkAddressText, 0.0,
-		GLUT_BITMAP_HELVETICA_18, network_address_display_string);
+	GLUT_BITMAP_HELVETICA_18, network_address_display_string);
 
 	// Swap back buffer to screen
 	glutSwapBuffers();

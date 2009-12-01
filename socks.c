@@ -22,35 +22,35 @@
 char network_address_display_string[100] = "Checking network address...";
 
 DWORD WINAPI network_thread(LPVOID lpParameter)
-{
+{	
 	// Retrieve input parameter (indicates whether this thread for player 1 or 2)
-	int player_number = 1;//*((int *)lpParameter);
+	int player_number = *((int *)lpParameter);
 	
-    WSADATA wsaData;
-    SOCKET ListenSocket = INVALID_SOCKET,
-           ClientSocket = INVALID_SOCKET;
-    struct addrinfo *result = NULL, hints;
-    unsigned char recvbuf[6];
-    unsigned char sendbuf[12];
-    int iResult, iSendResult;
-    int recvbuflen = 6;
-    int sendbuflen = 12;
+	WSADATA wsaData;
+	SOCKET ListenSocket = INVALID_SOCKET,
+	ClientSocket = INVALID_SOCKET;
+	struct addrinfo *result = NULL, hints;
+	unsigned char recvbuf[6];
+	unsigned char sendbuf[12];
+	int iResult, iSendResult;
+	int recvbuflen = 6;
+	int sendbuflen = 12;
 
-    // Initialize Winsock
-    iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
-    if (iResult != 0)
+	// Initialize Winsock
+	iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+	if (iResult != 0)
 	{
-        printf("WSAStartup failed: %d\n", iResult);
-        return 1;
-    }
+		printf("WSAStartup failed: %d\n", iResult);
+		return 1;
+	}
 
-    ZeroMemory(&hints, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
-    hints.ai_flags = AI_PASSIVE;
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_flags = AI_PASSIVE;
 
-    // Resolve the server address and port
+	// Resolve the server address and port
 	if (player_number == 1)
 	{
 		iResult = getaddrinfo(NULL, DEFAULT_PORT_1, &hints, &result);
@@ -59,34 +59,46 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	{
 		iResult = getaddrinfo(NULL, DEFAULT_PORT_2, &hints, &result);
 	}
-    if ( iResult != 0 ) {
-        printf("getaddrinfo failed: %d\n", iResult);
-        WSACleanup();
-        return 1;
-    }
+	if ( iResult != 0 ) {
+		printf("getaddrinfo failed: %d\n", iResult);
+		WSACleanup();
+		return 1;
+	}
 
-    // Create a SOCKET for connecting to server
-    ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-    if (ListenSocket == INVALID_SOCKET)
+	// Set on screen network address string
+	int i;
+	char ac[80];
+	gethostname(ac, sizeof(ac));
+	struct hostent *phe = gethostbyname(ac);
+	for (i = 0; phe->h_addr_list[i] != 0; ++i)
 	{
-        printf("socket failed: %ld\n", WSAGetLastError());
-        freeaddrinfo(result);
-        WSACleanup();
-        return 1;
-    }
-
-    // Setup the TCP listening socket
-    iResult = bind( ListenSocket, result->ai_addr, (int)result->ai_addrlen);
-    if (iResult == SOCKET_ERROR)
+		struct in_addr addr;
+		memcpy(&addr, phe->h_addr_list[i], sizeof(struct in_addr));
+		sprintf(network_address_display_string, "   %s : %s, %s", inet_ntoa(addr), DEFAULT_PORT_1, DEFAULT_PORT_2);
+	}
+	
+	// Create a SOCKET for connecting to server
+	ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+	if (ListenSocket == INVALID_SOCKET)
 	{
-        printf("bind failed: %d\n", WSAGetLastError());
-        freeaddrinfo(result);
-        closesocket(ListenSocket);
-        WSACleanup();
-        return 1;
-    }
+		printf("socket failed: %ld\n", WSAGetLastError());
+		freeaddrinfo(result);
+		WSACleanup();
+		return 1;
+	}
 
-    freeaddrinfo(result);
+	// Setup the TCP listening socket
+	iResult = bind( ListenSocket, result->ai_addr, (int)result->ai_addrlen);
+	if (iResult == SOCKET_ERROR)
+	{
+		printf("bind failed: %d\n", WSAGetLastError());
+		freeaddrinfo(result);
+		closesocket(ListenSocket);
+		WSACleanup();
+		return 1;
+	}
+
+	freeaddrinfo(result);
 
 	iResult = listen(ListenSocket, SOMAXCONN);
 	if (iResult == SOCKET_ERROR)
@@ -96,6 +108,7 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 		WSACleanup();
 		return 1;
 	}
+	
 
 	if (player_number == 1)
 	{
@@ -106,7 +119,7 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 		printf("Listening for client on port %s...\n", DEFAULT_PORT_2);
 	}
 	
-    while(1)
+	while(1)
 	{
 		// Accept a client socket
 		ClientSocket = accept(ListenSocket, NULL, NULL);
@@ -129,12 +142,12 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 			if (iResult > 0)
 			{
 				printf("Bytes received: %d\n", iResult);
-				robot[player_number].LATA = recvbuf[0];
-				robot[player_number].LATB = recvbuf[1];
-				robot[player_number].LATC = recvbuf[2];
-				robot[player_number].LATD = recvbuf[3];
-				robot[player_number].CCPR1L = recvbuf[4];
-				robot[player_number].CCPR2L = recvbuf[5];
+				robot[player_number - 1].LATA = recvbuf[0];
+				robot[player_number - 1].LATB = recvbuf[1];
+				robot[player_number - 1].LATC = recvbuf[2];
+				robot[player_number - 1].LATD = recvbuf[3];
+				robot[player_number - 1].CCPR1L = recvbuf[4];
+				robot[player_number - 1].CCPR2L = recvbuf[5];
 			}
 			else if (iResult == 0)
 			{
@@ -170,19 +183,19 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 		}
 
 		// Stop robot moving
-		robot[player_number].LATA = 0;
-		robot[player_number].LATB = 0;
-		robot[player_number].LATC = 0;
-		robot[player_number].LATD = 0;
-		robot[player_number].CCPR1L = 0;
-		robot[player_number].CCPR2L = 0;
+		robot[player_number - 1].LATA = 0;
+		robot[player_number - 1].LATB = 0;
+		robot[player_number - 1].LATC = 0;
+		robot[player_number - 1].LATD = 0;
+		robot[player_number - 1].CCPR1L = 0;
+		robot[player_number - 1].CCPR2L = 0;
 
 		// cleanup
 		closesocket(ClientSocket);
 	}
 	
-    closesocket(ListenSocket);
-    WSACleanup();
+	closesocket(ListenSocket);
+	WSACleanup();
 
 	return (0);
 }
