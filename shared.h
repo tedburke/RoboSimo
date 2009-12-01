@@ -8,6 +8,13 @@
 // Robot object
 struct robot_state
 {
+	unsigned char LATA;
+	unsigned char LATB;
+	unsigned char LATC;
+	unsigned char LATD;
+	unsigned char CCPR1L;
+	unsigned char CCPR2L;
+
 	int active;
 	char name[20];
 	double w, l, h; // width, length, height

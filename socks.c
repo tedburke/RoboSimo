@@ -4,15 +4,18 @@
 // This file contains the network communication thread function for RoboSimo.
 //
 
+#define WINVER 0x0501
+
+#include <windows.h>
 #include <Winsock2.h>
+#include <ws2tcpip.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "shared.h"
 
-#define D_PORT 4009
-#define D_QUEUE 32
-#define D_SOCKETS 16
-#define D_INFO 256
+#define DEFAULT_PORT_1 "4009"
+#define DEFAULT_PORT_2 "4010"
 
 // This string will be set to the network address
 // info to be displayed on the screen.
@@ -20,194 +23,166 @@ char network_address_display_string[100] = "Checking network address...";
 
 DWORD WINAPI network_thread(LPVOID lpParameter)
 {
-	struct timeval tv;
-	struct sockaddr_in addr;
-	struct hostent *host;
-	unsigned int descriptor;
-	int result;
-	int index;
-	//int cycle = 0;
-	unsigned int sockets[D_SOCKETS];
-	int sockets_index = 0;
-	unsigned int maximun;
-	char recv_buffer[D_INFO];
-	unsigned char send_buffer[12];
-	fd_set input;
-		
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
+	// Retrieve input parameter (indicates whether this thread for player 1 or 2)
+	int player_number = 1;//*((int *)lpParameter);
 	
-	descriptor = socket(PF_INET, SOCK_STREAM, 0); // create a socket
-	
-	// get information about the host
-	char hostname[50];
-	result = gethostname(hostname, 50);
-	memset(&addr, 0, sizeof(addr));
-	host = gethostbyname(hostname); // NULL if error
-	
-	// Create a string that will be used to display the
-	// computer's network address info on the screen.
-	unsigned char *a; // Used for printing IP addresses
-	a = (unsigned char *)host->h_addr_list[0];
-	sprintf(network_address_display_string, "  IP Address: %u.%u.%u.%u, Port: %d", a[0], a[1], a[2], a[3], D_PORT);
-	
-	// bind the socket to an address and port
-	memcpy(&addr.sin_addr, host->h_addr_list[0], sizeof(host->h_addr_list[0]));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(D_PORT);
-	result = bind(descriptor, (struct sockaddr *)&addr, sizeof(addr)); // -1 if error	
-	result = listen(descriptor, D_QUEUE); // put socket in listening state, returns -1 if error
-	
-	memset(sockets, 0, sizeof(sockets));
-	maximun = descriptor;
-	
-	result = 0;
-	while (program_exiting == 0)
+    WSADATA wsaData;
+    SOCKET ListenSocket = INVALID_SOCKET,
+           ClientSocket = INVALID_SOCKET;
+    struct addrinfo *result = NULL, hints;
+    unsigned char recvbuf[6];
+    unsigned char sendbuf[12];
+    int iResult, iSendResult;
+    int recvbuflen = 6;
+    int sendbuflen = 12;
+
+    // Initialize Winsock
+    iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (iResult != 0)
 	{
-		FD_ZERO(&input);
-		FD_SET(descriptor, &input);
-		for (result = 0; result < sockets_index; result++)
-		FD_SET(sockets[result], &input);
-		
-		// timeout structure
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-		result = select(maximun + 1, &input, NULL, NULL, &tv);
-		//result = select(maximun + 1, &input, NULL, NULL, NULL);
-		switch (result)
+        printf("WSAStartup failed: %d\n", iResult);
+        return 1;
+    }
+
+    ZeroMemory(&hints, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags = AI_PASSIVE;
+
+    // Resolve the server address and port
+	if (player_number == 1)
+	{
+		iResult = getaddrinfo(NULL, DEFAULT_PORT_1, &hints, &result);
+	}
+	else
+	{
+		iResult = getaddrinfo(NULL, DEFAULT_PORT_2, &hints, &result);
+	}
+    if ( iResult != 0 ) {
+        printf("getaddrinfo failed: %d\n", iResult);
+        WSACleanup();
+        return 1;
+    }
+
+    // Create a SOCKET for connecting to server
+    ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+    if (ListenSocket == INVALID_SOCKET)
+	{
+        printf("socket failed: %ld\n", WSAGetLastError());
+        freeaddrinfo(result);
+        WSACleanup();
+        return 1;
+    }
+
+    // Setup the TCP listening socket
+    iResult = bind( ListenSocket, result->ai_addr, (int)result->ai_addrlen);
+    if (iResult == SOCKET_ERROR)
+	{
+        printf("bind failed: %d\n", WSAGetLastError());
+        freeaddrinfo(result);
+        closesocket(ListenSocket);
+        WSACleanup();
+        return 1;
+    }
+
+    freeaddrinfo(result);
+
+	iResult = listen(ListenSocket, SOMAXCONN);
+	if (iResult == SOCKET_ERROR)
+	{
+		printf("listen failed: %d\n", WSAGetLastError());
+		closesocket(ListenSocket);
+		WSACleanup();
+		return 1;
+	}
+
+	if (player_number == 1)
+	{
+		printf("Listening for client on port %s...\n", DEFAULT_PORT_1);
+	}
+	else
+	{
+		printf("Listening for client on port %s...\n", DEFAULT_PORT_2);
+	}
+	
+    while(1)
+	{
+		// Accept a client socket
+		ClientSocket = accept(ListenSocket, NULL, NULL);
+		if (ClientSocket == INVALID_SOCKET) {
+			printf("accept failed: %d\n", WSAGetLastError());
+			closesocket(ListenSocket);
+			WSACleanup();
+			return 1;
+		}
+
+		printf("Got a client\n");
+
+		// No longer need server socket
+		//closesocket(ListenSocket);
+
+		while(1)
 		{
-		case -1:
-			// error in select
-			perror("select");
-			break;
-		case 0:
-			// nothing to process
-			break;
-		default:
-			// a number of sockets are ready for reading.
-			if (FD_ISSET(descriptor , &input)) // check if the descriptor set is our listening one
+			// Receive data
+			iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
+			if (iResult > 0)
 			{
-				sockets[sockets_index] = accept(descriptor, NULL, NULL);
-				if (sockets[sockets_index] == -1)
-				{
-					perror("accept");
-				}
-				else
-				{
-					if (sockets[sockets_index] > maximun)
-					maximun = sockets[sockets_index];
-					sockets_index++;
-				}
+				printf("Bytes received: %d\n", iResult);
+				robot[player_number].LATA = recvbuf[0];
+				robot[player_number].LATB = recvbuf[1];
+				robot[player_number].LATC = recvbuf[2];
+				robot[player_number].LATD = recvbuf[3];
+				robot[player_number].CCPR1L = recvbuf[4];
+				robot[player_number].CCPR2L = recvbuf[5];
+			}
+			else if (iResult == 0)
+			{
+				printf("Connection closing...\n");
+				break;
 			}
 			else
 			{
-				// one of the sockets is sending data. Find it
-				for (index = 0; index < sockets_index; index++)
-				{
-					if (FD_ISSET(sockets[index], &input))
-					{
-						memset(recv_buffer, 0, sizeof(recv_buffer));
-						
-						// read information from socket
-						result = recv(sockets[index], recv_buffer, sizeof(recv_buffer), 0);
-						if (result == -1)
-						{
-							perror("recv");
-						}
-						else
-						{
-							//printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
-							/*LATA = recv_buffer[0];
-							LATB = recv_buffer[1];
-							LATC = recv_buffer[2];
-							LATD = recv_buffer[3];
-							CCPR1L = recv_buffer[4];
-							CCPR2L = recv_buffer[5];
-							ADRESH = recv_buffer[6];*/
-							robot[0].v1 = ((recv_buffer[3] | 0x02) - (recv_buffer[3] | 0x01)) *
-												(recv_buffer[4]/255.0);
-							robot[0].v2 = ((recv_buffer[3] | 0x08) - (recv_buffer[3] | 0x04)) *
-												(recv_buffer[5]/255.0);
-							
-							/*
-							if (recv_buffer[0] == 27)
-							{
-								// An arrow key was pressed.
-								// These keys generate a 3-byte code.
-								switch(recv_buffer[2])
-								{
-								case 'A': // Up arrow key
-									robot[0].v1 = 0.25;
-									robot[0].v2 = 0.25;
-									break;
-								case 'B': // Down arrow key
-									robot[0].v1 = -0.25;
-									robot[0].v2 = -0.25;
-									break;
-								case 'C': // Right arrow key
-									robot[0].v1 = 0.25;
-									robot[0].v2 = -0.25;
-									break;
-								case 'D': // Left arrow key
-									robot[0].v1 = -0.25;
-									robot[0].v2 = 0.25;
-									break;
-								}
-							}
-							else
-							{
-								switch(recv_buffer[0])
-								{
-								case 'f':
-									robot[0].v1 = 0.25;
-									robot[0].v2 = 0.25;
-									break;
-								case 'b':
-									robot[0].v1 = -0.25;
-									robot[0].v2 = -0.25;
-									break;
-								case 'r':
-									robot[0].v1 = 0.25;
-									robot[0].v2 = -0.25;
-									break;
-								case ' ':
-								case 's':
-									robot[0].v1 = 0;
-									robot[0].v2 = 0;
-									break;
-								}
-							}*/
-						}
-						// Send sensor readings back to client
-						send_buffer[0] = 0; // PORTA
-						send_buffer[1] = 0; // PORTB
-						send_buffer[2] = 0; // PORTC
-						send_buffer[3] = 0; // PORTD
-						send_buffer[4] = 127; // AN0
-						send_buffer[5] = 255; // AN1
-						send_buffer[6] = 0; // AN2
-						send_buffer[7] = 0; // AN3
-						send_buffer[8] = 0; // AN4
-						send_buffer[9] = 0; // AN5
-						send_buffer[10] = 0; // AN6
-						send_buffer[11] = 0; // AN7
-						result = send(sockets[index], send_buffer, sizeof(send_buffer), 0);
-					}
-				}
+				printf("Failed to receive data\n");
+				break;
 			}
+			
+			// Send the "sensor readings" back to the client
+			sendbuf[0] = 0; // PORTA
+			sendbuf[1] = 0; // PORTB
+			sendbuf[2] = 0; // PORTC
+			sendbuf[3] = 0; // PORTD
+			sendbuf[4] = 0; // AN0 - front left light sensor
+			sendbuf[5] = 0; // AN1 - front right light sensor
+			sendbuf[6] = 0; // AN2 - back left light sensor
+			sendbuf[7] = 0; // AN3 - back right light sensor
+			sendbuf[8] = 0; // AN4
+			sendbuf[9] = 0; // AN5
+			sendbuf[10] = 0; // AN6
+			sendbuf[11] = 0; // AN7
+			iSendResult = send(ClientSocket, sendbuf, sendbuflen, 0);
+			if (iSendResult == SOCKET_ERROR)
+			{
+				printf("send failed: %d\n", WSAGetLastError());
+				break;
+			}
+			printf("Bytes sent: %d\n", iSendResult);
 		}
-		
-		//printf("%d\r", cycle++);
+
+		// Stop robot moving
+		robot[player_number].LATA = 0;
+		robot[player_number].LATB = 0;
+		robot[player_number].LATC = 0;
+		robot[player_number].LATD = 0;
+		robot[player_number].CCPR1L = 0;
+		robot[player_number].CCPR2L = 0;
+
+		// cleanup
+		closesocket(ClientSocket);
 	}
 	
-	for (result = 0; result < sockets_index; result++)
-	{
-		closesocket(sockets[sockets_index]);
-	}
-	
-	// Tidy up before exiting
-	closesocket(descriptor);
-	WSACleanup();
-	
+    closesocket(ListenSocket);
+    WSACleanup();
+
 	return (0);
 }

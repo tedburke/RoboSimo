@@ -35,8 +35,10 @@ static int window;
 int fullscreen = 0; // to be set to 1 for fullscreen mode
 
 // definition for network thread function
+int p1 = 1;
+int p2 = 2;
 extern DWORD WINAPI network_thread(LPVOID);
-HANDLE hNetworkThread;
+HANDLE hNetworkThread1, hNetworkThread2;
 
 // This string will be set to the network address
 // info to be displayed on the screen.
@@ -88,8 +90,9 @@ int main(int argc, char **argv)
 	robot[1].y = 0;
 	robot[1].angle = pi;
 
-	// Launch network thread
-	hNetworkThread = CreateThread(NULL, 0, network_thread, NULL, 0, NULL);
+	// Launch network threads (one for each player, ports 4009 and 4010)
+	hNetworkThread1 = CreateThread(NULL, 0, network_thread, NULL, 0, (LPVOID)(&p1));
+	hNetworkThread2 = CreateThread(NULL, 0, network_thread, NULL, 0, (LPVOID)(&p2));
 	
 	// Enter the main event loop
 	glutMainLoop();
@@ -109,8 +112,10 @@ void update()
 	{
 		// Clean up, then exit
 		glutDestroyWindow(window);
-		WaitForSingleObject(hNetworkThread, 1000); // Wait up to 1 second for network thread to exit
-		CloseHandle(hNetworkThread);
+		WaitForSingleObject(hNetworkThread1, 1000); // Wait up to 1 second for network thread to exit
+		WaitForSingleObject(hNetworkThread2, 1000); // Wait up to 1 second for network thread to exit
+		CloseHandle(hNetworkThread1);
+		CloseHandle(hNetworkThread2);
 		exit(0);
 	}
 	
@@ -126,6 +131,10 @@ void update()
 	double x1, y1, x2, y2;
 	for (n=0 ; n<2 ; ++n)
 	{
+		// Update wheel velocities
+		robot[n].v1 = ((robot[n].LATD & 0x02)-(robot[n].LATD & 0x01)) * (robot[n].CCPR1L / 1000.0);
+		robot[n].v2 = ((robot[n].LATD & 0x04)-(robot[n].LATD & 0x03)) * (robot[n].CCPR2L / 1000.0);
+		
 		// Left wheel position: x1, y1. Left wheel velocity: v1.
 		// Right wheel position: x2, y2. Left wheel velocity: v2.
 		x1 = robot[n].x - (robot[n].w/2.0)*sin(robot[n].angle) + tau*robot[n].v1*cos(robot[n].angle);
