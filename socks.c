@@ -30,7 +30,8 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	unsigned int sockets[D_SOCKETS];
 	int sockets_index = 0;
 	unsigned int maximun;
-	char buffer[D_INFO];
+	char recv_buffer[D_INFO];
+	unsigned char send_buffer[12];
 	fd_set input;
 		
 	WSADATA wsaData;
@@ -105,20 +106,35 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 				{
 					if (FD_ISSET(sockets[index], &input))
 					{
-						memset(buffer, 0, sizeof(buffer));
+						memset(recv_buffer, 0, sizeof(recv_buffer));
 						
 						// read information from socket
-						result = recv(sockets[index], buffer, sizeof(buffer), 0);
+						result = recv(sockets[index], recv_buffer, sizeof(recv_buffer), 0);
 						if (result == -1)
-						perror("recv");
+						{
+							perror("recv");
+						}
 						else
 						{
 							//printf("Received %d bytes from descriptor %d: %s\n", result, sockets[index], buffer);
-							if (buffer[0] == 27)
+							/*LATA = recv_buffer[0];
+							LATB = recv_buffer[1];
+							LATC = recv_buffer[2];
+							LATD = recv_buffer[3];
+							CCPR1L = recv_buffer[4];
+							CCPR2L = recv_buffer[5];
+							ADRESH = recv_buffer[6];*/
+							robot[0].v1 = ((recv_buffer[3] | 0x02) - (recv_buffer[3] | 0x01)) *
+												(recv_buffer[4]/255.0);
+							robot[0].v2 = ((recv_buffer[3] | 0x08) - (recv_buffer[3] | 0x04)) *
+												(recv_buffer[5]/255.0);
+							
+							/*
+							if (recv_buffer[0] == 27)
 							{
 								// An arrow key was pressed.
 								// These keys generate a 3-byte code.
-								switch(buffer[2])
+								switch(recv_buffer[2])
 								{
 								case 'A': // Up arrow key
 									robot[0].v1 = 0.25;
@@ -140,7 +156,7 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 							}
 							else
 							{
-								switch(buffer[0])
+								switch(recv_buffer[0])
 								{
 								case 'f':
 									robot[0].v1 = 0.25;
@@ -160,8 +176,22 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 									robot[0].v2 = 0;
 									break;
 								}
-							}
+							}*/
 						}
+						// Send sensor readings back to client
+						send_buffer[0] = 0; // PORTA
+						send_buffer[1] = 0; // PORTB
+						send_buffer[2] = 0; // PORTC
+						send_buffer[3] = 0; // PORTD
+						send_buffer[4] = 127; // AN0
+						send_buffer[5] = 255; // AN1
+						send_buffer[6] = 0; // AN2
+						send_buffer[7] = 0; // AN3
+						send_buffer[8] = 0; // AN4
+						send_buffer[9] = 0; // AN5
+						send_buffer[10] = 0; // AN6
+						send_buffer[11] = 0; // AN7
+						result = send(sockets[index], send_buffer, sizeof(send_buffer), 0);
 					}
 				}
 			}
@@ -178,8 +208,6 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 	// Tidy up before exiting
 	closesocket(descriptor);
 	WSACleanup();
-	
-	//printf("Exiting\n");
 	
 	return (0);
 }
