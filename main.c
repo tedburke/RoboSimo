@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 	{
 		for (x = 0 ; x < texImageWidth ; ++x)
 		{
-			
+			texImage[y][x][0] = sin(x/texImageWidth)
 		}
 	}
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
