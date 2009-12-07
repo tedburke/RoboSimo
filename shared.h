@@ -8,12 +8,18 @@
 // Robot object
 struct robot_state
 {
+	// Digital output pins
 	unsigned char LATA;
 	unsigned char LATB;
 	unsigned char LATC;
 	unsigned char LATD;
+	
+	// PWM output registers
 	unsigned char CCPR1L;
 	unsigned char CCPR2L;
+	
+	// analog inputs
+	unsigned char AN[8];
 
 	int active;
 	char name[20];

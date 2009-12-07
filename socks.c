@@ -112,7 +112,6 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 		return 1;
 	}
 	
-
 	if (player_number == 1)
 	{
 		printf("Listening for client on port %s...\n", DEFAULT_PORT_1);
@@ -144,7 +143,7 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 			iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
 			if (iResult > 0)
 			{
-				printf("Bytes received: %d\n", iResult);
+				//printf("Bytes received: %d\n", iResult);
 				robot[player_number - 1].LATA = recvbuf[0];
 				robot[player_number - 1].LATB = recvbuf[1];
 				robot[player_number - 1].LATC = recvbuf[2];
@@ -168,21 +167,20 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 			sendbuf[1] = 0; // PORTB
 			sendbuf[2] = 0; // PORTC
 			sendbuf[3] = 0; // PORTD
-			sendbuf[4] = 0; // AN0 - front left light sensor
-			sendbuf[5] = 0; // AN1 - front right light sensor
-			sendbuf[6] = 0; // AN2 - back left light sensor
-			sendbuf[7] = 0; // AN3 - back right light sensor
-			sendbuf[8] = 0; // AN4
-			sendbuf[9] = 0; // AN5
-			sendbuf[10] = 0; // AN6
-			sendbuf[11] = 0; // AN7
+			sendbuf[4] = robot[player_number - 1].AN[0]; // AN0 - front left light sensor
+			sendbuf[5] = robot[player_number - 1].AN[1]; // AN1 - front right light sensor
+			sendbuf[6] = robot[player_number - 1].AN[2]; // AN2 - back left light sensor
+			sendbuf[7] = robot[player_number - 1].AN[3]; // AN3 - back right light sensor
+			sendbuf[8] = robot[player_number - 1].AN[4]; // AN4
+			sendbuf[9] = robot[player_number - 1].AN[5]; // AN5
+			sendbuf[10] = robot[player_number - 1].AN[6]; // AN6
+			sendbuf[11] = robot[player_number - 1].AN[7]; // AN7
 			iSendResult = send(ClientSocket, sendbuf, sendbuflen, 0);
 			if (iSendResult == SOCKET_ERROR)
 			{
 				printf("send failed: %d\n", WSAGetLastError());
 				break;
 			}
-			printf("Bytes sent: %d\n", iSendResult);
 		}
 
 		// Stop robot moving
