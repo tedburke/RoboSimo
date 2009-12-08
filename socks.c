@@ -181,6 +181,9 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 				printf("send failed: %d\n", WSAGetLastError());
 				break;
 			}
+			
+			// Short pause
+			Sleep(20);
 		}
 
 		// Stop robot moving

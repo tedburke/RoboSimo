@@ -144,10 +144,10 @@ void initialise_robots()
 	}
 	robot[0].x = -0.5; // Put first robot on left of arena facing right
 	robot[0].y = 0.0;
-	robot[0].angle = 0;
+	robot[0].angle = pi * (-0.25 + (0.5 * rand() / (double)RAND_MAX));
 	robot[1].x = 0.5; // Put second robot on right of arena facing left
 	robot[1].y = 0.0;
-	robot[1].angle = pi;
+	robot[1].angle = pi * (0.75 + (0.5 * rand() / (double)RAND_MAX));
 }
 
 GLubyte get_colour(GLfloat x, GLfloat y)
