@@ -77,12 +77,12 @@ int main(int argc, char **argv)
 	// Set the background colour to green
 	glClearColor(0, 1, 0, 0);
 	
-	// Load arena floor texture image data from file
-	FILE *texture_file;
-	texture_file = fopen("texture.raw", "r");
-	fread(texImage, 3, 512*512, texture_file);
+	// Load floor pattern from bmp file
+	FILE *texture_file = fopen("floor.bmp", "r");
+	fread(texImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
+	fread(texImage, 3, texImageWidth*texImageHeight, texture_file);
 	fclose(texture_file);
-	
+		
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(1, &texName);
 	glBindTexture(GL_TEXTURE_2D, texName);
@@ -328,7 +328,7 @@ void display()
 		glRotatef(robot[n].angle * (180.0/pi), 0.0, 0.0, 1.0);
 		glScalef(robot[n].l, robot[n].w, robot[n].h);
 		glutSolidCube(1.0);
-		// Simple indicator of robot direction
+		// Simple indicator which end of the robot is the front
 		glColor3f(1.0, 1.0, 1.0);
 		glLoadIdentity();
 		glTranslatef(robot[n].x, robot[n].y, robot[n].h);
@@ -344,7 +344,7 @@ void display()
 	glLoadIdentity();
 	renderBitmapString(x_networkAddressText, y_networkAddressText, 0.0,
 						GLUT_BITMAP_HELVETICA_18, network_address_display_string);
-
+	
 	// Swap back buffer to screen
 	glutSwapBuffers();
 }
