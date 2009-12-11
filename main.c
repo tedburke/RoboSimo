@@ -31,6 +31,10 @@ clock_t last_time;
 // GLUT window identifier
 static int window;
 
+// Orthographic projection dimensions
+double ortho_left, ortho_right, ortho_bottom, ortho_top;
+GLint orthographic_projection = 0;
+
 // Global flags
 int fullscreen = 0; // to be set to 1 for fullscreen mode
 
@@ -108,11 +112,6 @@ int main(int argc, char **argv)
 
 	// Initialise robots
 	initialise_robots();
-	
-	//fread(texImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
-	//fread(texImage, 3, texImageWidth*texImageHeight, texture_file);
-	//fclose(texture_file);
-	
 	
 	// Launch network threads (one for each player, ports 4009 and 4010)
 	hNetworkThread1 = CreateThread(NULL, 0, network_thread, (LPVOID)(&p1), 0, NULL);
@@ -314,34 +313,28 @@ void update()
 void reshape(int window_width, int window_height)
 {
 	int text_bar_height = 25;
-	double scene_width, scene_height;
-	double left, right, bottom, top;
 	
 	// Set viewport to new window size
 	glViewport(0, 0, window_width, window_height);
 	
-	// Set up OpenGL projection
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
+	// Calculate dimensions for orthographic OpenGL projection
 	if (window_width > window_height - text_bar_height)
 	{
-		top = 0.7;
-		bottom = -0.7 * (window_height + 2.0*text_bar_height) / (double)window_height;
-		right = 0.7 * (window_width/(double)(window_height-text_bar_height));
-		left = -right;
+		ortho_top = 0.7;
+		ortho_bottom = -0.7 * (window_height + 2.0*text_bar_height) / (double)window_height;
+		ortho_right = 0.7 * (window_width/(double)(window_height-text_bar_height));
+		ortho_left = -ortho_right;
 	}
 	else
 	{
-		right = 0.7;
-		left = -right;
-		top = 0.7 * ((window_height-text_bar_height)/(double)window_width);
-		bottom = -top * (window_height + 2.0 * text_bar_height) / (double)window_height;
+		ortho_right = 0.7;
+		ortho_left = -ortho_right;
+		ortho_top = 0.7 * ((window_height-text_bar_height)/(double)window_width);
+		ortho_bottom = -ortho_top * (window_height + 2.0 * text_bar_height) / (double)window_height;
 	}
 	
-	gluOrtho2D(left, right, bottom, top);
-	
 	// Update position of network address text
-	x_networkAddressText = left; // NB string starts with a couple of spaces, so ok to place at left edge
+	x_networkAddressText = ortho_left; // NB string starts with a couple of spaces, so ok to place at left edge
 	y_networkAddressText = -0.7;
 }
 
@@ -351,10 +344,28 @@ void display()
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// Draw arena
+
+	// Select appropriate projection
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	if (orthographic_projection == 1)
+	{
+		// Specify orthographic projection
+		gluOrtho2D(ortho_left, ortho_right, ortho_bottom, ortho_top);
+	}
+	else
+	{
+		// Specify perspective projection - fovy, aspect, zNear, zFar
+		gluPerspective(30, 1, 1, 100);
+	}
+	
+	// Render bitmap on arena floor
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	
-	// Render bitmap on arena floor
+	// Add more here if using perspective projection
+	gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+	
 	glColor3d(1,1,1);
 	glEnable(GL_TEXTURE_2D);
 	//glBindTexture(GL_TEXTURE_2D, texName);
@@ -393,12 +404,18 @@ void display()
 		glutSolidCone(0.25, 0.5, 4, 4);
 	}
 	
-	// Draw text information
-	glColor3f(0.0, 0.0, 0.0);
+	// Specify OpenGL projection
+	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+	gluOrtho2D(ortho_left, ortho_right, ortho_bottom, ortho_top);
+
+	// Draw text information
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glColor3f(0.0, 0.0, 0.0);
 	renderBitmapString(x_networkAddressText, y_networkAddressText, 0.0,
 						GLUT_BITMAP_HELVETICA_18, network_address_display_string);
-	
+
 	// Swap back buffer to screen
 	glutSwapBuffers();
 }
