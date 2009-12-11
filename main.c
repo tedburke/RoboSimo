@@ -108,7 +108,12 @@ int main(int argc, char **argv)
 
 	// Initialise robots
 	initialise_robots();
-					
+	
+	//fread(texImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
+	//fread(texImage, 3, texImageWidth*texImageHeight, texture_file);
+	//fclose(texture_file);
+	
+	
 	// Launch network threads (one for each player, ports 4009 and 4010)
 	hNetworkThread1 = CreateThread(NULL, 0, network_thread, (LPVOID)(&p1), 0, NULL);
 	hNetworkThread2 = CreateThread(NULL, 0, network_thread, (LPVOID)(&p2), 0, NULL);
@@ -153,18 +158,70 @@ void initialise_robots()
 		robot[n].AN[6] = 0;
 		robot[n].AN[7] = 0;
 	}
+	
+	/*
 	robot[0].x = -0.5; // Put first robot on left of arena facing right
 	robot[0].y = 0.0;
 	robot[0].angle = pi * (-0.25 + (0.5 * rand() / (double)RAND_MAX));
 	robot[1].x = 0.5; // Put second robot on right of arena facing left
 	robot[1].y = 0.0;
 	robot[1].angle = pi * (0.75 + (0.5 * rand() / (double)RAND_MAX));
+	*/
+	
+	// Random angle offset
+	double max_random_angle_offset = 0;
+	
+	// Load robot_positions.txt to set starting positions
+	FILE *robot_positions_file = fopen("robot_positions.txt", "r");
+	char word[20];
+	while(1)
+	{
+		fscanf(robot_positions_file, "%s", word);
+		if (strcmp(word, "END") == 0) break;
+		else if (strcmp(word, "ROBOT_0_X") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &(robot[0].x));
+		}
+		else if (strcmp(word, "ROBOT_0_Y") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &robot[0].y);
+		}
+		else if (strcmp(word, "ROBOT_0_ANGLE") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &robot[0].angle);
+		}
+		else if (strcmp(word, "MAX_RANDOM_ANGLE_OFFSET") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &max_random_angle_offset);
+		}
+		else if (strcmp(word, "ROBOT_1_X") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &robot[1].x);
+		}
+		else if (strcmp(word, "ROBOT_1_Y") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &robot[1].y);
+		}
+		else if (strcmp(word, "ROBOT_1_ANGLE") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &robot[1].angle);
+		}
+		
+		robot[0].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
+		robot[1].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
+	}
+	fclose(robot_positions_file);
 }
 
+// This function obtains the background colour (actually intensity between 0 and 255)
+// at a specified OpenGL coordinate
 GLubyte get_colour(GLfloat x, GLfloat y)
 {
 	// NB The loaded floor texture is mapped onto the square area from top left
 	// at (-0.7, 0.7) to bottom right at (0.7, -0.7).
+	//
+	// NB The first line in the bitmap data is actually the bottom row of pixels
+	// in the image.
 	
 	// First translate x and y to the range 0 to 1
 	x = (x + 0.7) / 1.4;
