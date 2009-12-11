@@ -158,16 +158,7 @@ void initialise_robots()
 		robot[n].AN[6] = 0;
 		robot[n].AN[7] = 0;
 	}
-	
-	/*
-	robot[0].x = -0.5; // Put first robot on left of arena facing right
-	robot[0].y = 0.0;
-	robot[0].angle = pi * (-0.25 + (0.5 * rand() / (double)RAND_MAX));
-	robot[1].x = 0.5; // Put second robot on right of arena facing left
-	robot[1].y = 0.0;
-	robot[1].angle = pi * (0.75 + (0.5 * rand() / (double)RAND_MAX));
-	*/
-	
+		
 	// Random angle offset
 	double max_random_angle_offset = 0;
 	
