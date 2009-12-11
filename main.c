@@ -82,7 +82,20 @@ int main(int argc, char **argv)
 	fread(texImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
 	fread(texImage, 3, texImageWidth*texImageHeight, texture_file);
 	fclose(texture_file);
-		
+	
+	// Convert from BGR to RGB
+	int x, y;
+	GLubyte temp;
+	for (y = 0 ; y < texImageHeight ; ++y)
+	{
+		for (x = 0 ; x < texImageWidth ; ++x)
+		{
+			temp = texImage[y][x][0];
+			texImage[y][x][0] = texImage[y][x][2];
+			texImage[y][x][2] = temp;
+		}
+	}
+	
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(1, &texName);
 	glBindTexture(GL_TEXTURE_2D, texName);
@@ -120,8 +133,6 @@ void initialise_robots()
 		robot[n].w = 0.16; // 16cm wide
 		robot[n].l = 0.20; // 20cm long
 		robot[n].h = 0.10; // 10cm high
-		//robot[n].v1 = 0;
-		//robot[n].v2 = 0;
 
 		robot[n].LATA = 0;
 		robot[n].LATB = 0;
@@ -157,7 +168,7 @@ GLubyte get_colour(GLfloat x, GLfloat y)
 	
 	// First translate x and y to the range 0 to 1
 	x = (x + 0.7) / 1.4;
-	y = 1 - ((y + 0.7) / 1.4);
+	y = (y + 0.7) / 1.4;
 	if (x > 1) x = 1;
 	if (x < 0) x = 0;
 	if (y > 1) y = 1;
@@ -292,26 +303,19 @@ void display()
 	// Draw arena
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	/*GLUquadricObj *pQuad;
-	pQuad = gluNewQuadric();
-	glColor3d(1, 1, 1);
-	gluDisk(pQuad, 0, 0.6, 36, 2);
-	glColor3d(0, 0, 0);
-	gluDisk(pQuad, 0, 0.5, 36, 2);
-	gluDeleteQuadric(pQuad);*/
 	
 	// Render bitmap on arena floor
 	glColor3d(1,1,1);
 	glEnable(GL_TEXTURE_2D);
 	//glBindTexture(GL_TEXTURE_2D, texName);
 	glBegin(GL_QUADS);
-	glTexCoord2f(0.0, 0.0);
-	glVertex3f(-0.7, 0.7, 0.0);
-	glTexCoord2f(1.0, 0.0);
-	glVertex3f(0.7, 0.7, 0.0);
-	glTexCoord2f(1.0, 1.0);
-	glVertex3f(0.7, -0.7, 0.0);
 	glTexCoord2f(0.0, 1.0);
+	glVertex3f(-0.7, 0.7, 0.0);
+	glTexCoord2f(1.0, 1.0);
+	glVertex3f(0.7, 0.7, 0.0);
+	glTexCoord2f(1.0, 0.0);
+	glVertex3f(0.7, -0.7, 0.0);
+	glTexCoord2f(0.0, 0.0);
 	glVertex3f(-0.7, -0.7, 0.0);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
