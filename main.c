@@ -171,7 +171,7 @@ void initialise_robots()
 		if (strcmp(word, "END") == 0) break;
 		else if (strcmp(word, "ROBOT_0_X") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &(robot[0].x));
+			fscanf(robot_positions_file, "%lf", &robot[0].x);
 		}
 		else if (strcmp(word, "ROBOT_0_Y") == 0)
 		{
@@ -180,10 +180,6 @@ void initialise_robots()
 		else if (strcmp(word, "ROBOT_0_ANGLE") == 0)
 		{
 			fscanf(robot_positions_file, "%lf", &robot[0].angle);
-		}
-		else if (strcmp(word, "MAX_RANDOM_ANGLE_OFFSET") == 0)
-		{
-			fscanf(robot_positions_file, "%lf", &max_random_angle_offset);
 		}
 		else if (strcmp(word, "ROBOT_1_X") == 0)
 		{
@@ -197,10 +193,16 @@ void initialise_robots()
 		{
 			fscanf(robot_positions_file, "%lf", &robot[1].angle);
 		}
-		
-		robot[0].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
-		robot[1].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
+		else if (strcmp(word, "MAX_RANDOM_ANGLE_OFFSET") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &max_random_angle_offset);
+		}
 	}
+
+	// Add random angle offsets
+	robot[0].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
+	robot[1].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
+
 	fclose(robot_positions_file);
 }
 
