@@ -21,6 +21,8 @@ void update(void);
 void display(void);
 void reshape(int, int);
 void keyboard(unsigned char key, int x, int y);
+void mouse(int, int, int, int);
+void mouseDrag(int, int);
 
 // Define the value of pi
 const double pi = 3.14159;
@@ -34,6 +36,11 @@ static int window;
 // Orthographic projection dimensions
 double ortho_left, ortho_right, ortho_bottom, ortho_top;
 GLint orthographic_projection = 0;
+
+// Camera position for perspective view
+GLfloat camera_latitude = 50; // degrees "south" of vertical
+GLfloat camera_longitude = 0; // degrees "east" of reference point
+GLfloat camera_distance = 4; // distance from centre point of table
 
 // Global flags
 int fullscreen = 0; // to be set to 1 for fullscreen mode
@@ -75,6 +82,8 @@ int main(int argc, char **argv)
 	// Register callback functions
 	glutIdleFunc(update);
 	glutKeyboardFunc(keyboard);
+	glutMouseFunc(mouse);
+	glutMotionFunc(mouseDrag);
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	
@@ -351,7 +360,7 @@ void display()
 	if (orthographic_projection == 1)
 	{
 		// Specify orthographic projection
-		gluOrtho2D(ortho_left, ortho_right, ortho_bottom, ortho_top);
+		glOrtho(ortho_left, ortho_right, ortho_bottom, ortho_top, -1, 100);
 	}
 	else
 	{
@@ -362,13 +371,15 @@ void display()
 	// Render bitmap on arena floor
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	
-	// Add more here if using perspective projection
 	gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+	if (orthographic_projection == 0)
+	{
+		glRotatef(-camera_latitude, 1, 0, 0);
+		glRotatef(-camera_longitude, 0, 0, 1);
+	}
 	
 	glColor3d(1,1,1);
 	glEnable(GL_TEXTURE_2D);
-	//glBindTexture(GL_TEXTURE_2D, texName);
 	glBegin(GL_QUADS);
 	glTexCoord2f(0.0, 1.0);
 	glVertex3f(-0.7, 0.7, 0.0);
@@ -389,6 +400,12 @@ void display()
 		if (n == 0) glColor3f(1.0, 0.0, 0.0);
 		else glColor3f(0.0, 0.0, 1.0);
 		glLoadIdentity();
+		gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+		if (orthographic_projection == 0)
+		{
+			glRotatef(-camera_latitude, 1, 0, 0);
+			glRotatef(-camera_longitude, 0, 0, 1);
+		}
 		glTranslatef(robot[n].x, robot[n].y, robot[n].h/2.0);
 		glRotatef(robot[n].angle * (180.0/pi), 0.0, 0.0, 1.0);
 		glScalef(robot[n].l, robot[n].w, robot[n].h);
@@ -396,6 +413,12 @@ void display()
 		// Simple indicator which end of the robot is the front
 		glColor3f(1.0, 1.0, 1.0);
 		glLoadIdentity();
+		gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+		if (orthographic_projection == 0)
+		{
+			glRotatef(-camera_latitude, 1, 0, 0);
+			glRotatef(-camera_longitude, 0, 0, 1);
+		}
 		glTranslatef(robot[n].x, robot[n].y, robot[n].h);
 		glRotatef(robot[n].angle * (180.0/pi), 0.0, 0.0, 1.0);
 		glScalef(robot[n].l, robot[n].w, robot[n].w);
@@ -407,7 +430,7 @@ void display()
 	// Specify OpenGL projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(ortho_left, ortho_right, ortho_bottom, ortho_top);
+	glOrtho(ortho_left, ortho_right, ortho_bottom, ortho_top, -1, 100);
 
 	// Draw text information
 	glMatrixMode(GL_MODELVIEW);
@@ -415,7 +438,7 @@ void display()
 	glColor3f(0.0, 0.0, 0.0);
 	renderBitmapString(x_networkAddressText, y_networkAddressText, 0.0,
 						GLUT_BITMAP_HELVETICA_18, network_address_display_string);
-
+	
 	// Swap back buffer to screen
 	glutSwapBuffers();
 }
@@ -424,6 +447,31 @@ void keyboard(unsigned char key, int x, int y)
 {
 	if (key == 'q') program_exiting = 1; // Set exiting flag
 	if (key == ' ') initialise_robots();
+	if (key == 'v') orthographic_projection = (orthographic_projection) ? 0 : 1;
+}
+
+int mouse_previous_x, mouse_previous_y;
+
+void mouse(int button, int state, int x, int y)
+{
+	if ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN))
+	{
+		mouse_previous_x = x;
+		mouse_previous_y = y;
+	}
+}
+
+void mouseDrag(int x, int y)
+{
+	camera_latitude -= (y - mouse_previous_y)/2.0;
+	camera_longitude -= (x - mouse_previous_x)/2.0;
+	mouse_previous_x = x;
+	mouse_previous_y = y;
+	
+	if (camera_latitude > 90.0) camera_latitude = 90.0;
+	if (camera_latitude < 0.0) camera_latitude = 0.0;
+	if (camera_longitude > 360.0) camera_longitude -= 360.0;
+	if (camera_longitude < 0.0) camera_longitude += 360.0;
 }
 
 // This function renders a string (some text) on the screen at a specified position
