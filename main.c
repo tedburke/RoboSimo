@@ -21,6 +21,7 @@ void update(void);
 void display(void);
 void reshape(int, int);
 void keyboard(unsigned char key, int x, int y);
+void keyboardSpecial(int key, int x, int y);
 void mouse(int, int, int, int);
 void mouseDrag(int, int);
 
@@ -70,7 +71,7 @@ int main(int argc, char **argv)
 {
 	// Start GLUT
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 
 	glutInitWindowSize(640,400);
 	glutInitWindowPosition(100,100);
@@ -82,6 +83,7 @@ int main(int argc, char **argv)
 	// Register callback functions
 	glutIdleFunc(update);
 	glutKeyboardFunc(keyboard);
+	glutSpecialFunc(keyboardSpecial);
 	glutMouseFunc(mouse);
 	glutMotionFunc(mouseDrag);
 	glutDisplayFunc(display);
@@ -350,9 +352,7 @@ void reshape(int window_width, int window_height)
 void display()
 {
 	// Clear the background
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	// Draw arena
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Select appropriate projection
 	glMatrixMode(GL_PROJECTION);
@@ -371,7 +371,7 @@ void display()
 	// Render bitmap on arena floor
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+	gluLookAt(0, 0, camera_distance, 0, 0, 0, 0, 1, 0);
 	if (orthographic_projection == 0)
 	{
 		glRotatef(-camera_latitude, 1, 0, 0);
@@ -393,6 +393,7 @@ void display()
 	glDisable(GL_TEXTURE_2D);
 
 	// Draw robots
+	glEnable(GL_DEPTH_TEST);
 	int n;
 	for (n=0 ; n<=1 ; ++n)
 	{
@@ -400,7 +401,7 @@ void display()
 		if (n == 0) glColor3f(1.0, 0.0, 0.0);
 		else glColor3f(0.0, 0.0, 1.0);
 		glLoadIdentity();
-		gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+		gluLookAt(0, 0, camera_distance, 0, 0, 0, 0, 1, 0);
 		if (orthographic_projection == 0)
 		{
 			glRotatef(-camera_latitude, 1, 0, 0);
@@ -413,7 +414,7 @@ void display()
 		// Simple indicator which end of the robot is the front
 		glColor3f(1.0, 1.0, 1.0);
 		glLoadIdentity();
-		gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+		gluLookAt(0, 0, camera_distance, 0, 0, 0, 0, 1, 0);
 		if (orthographic_projection == 0)
 		{
 			glRotatef(-camera_latitude, 1, 0, 0);
@@ -426,6 +427,7 @@ void display()
 		glRotatef(90.0, 0.0, 1.0, 0.0);
 		glutSolidCone(0.25, 0.5, 4, 4);
 	}
+	glDisable(GL_DEPTH_TEST);
 	
 	// Specify OpenGL projection
 	glMatrixMode(GL_PROJECTION);
@@ -448,6 +450,14 @@ void keyboard(unsigned char key, int x, int y)
 	if (key == 'q') program_exiting = 1; // Set exiting flag
 	if (key == ' ') initialise_robots();
 	if (key == 'v') orthographic_projection = (orthographic_projection) ? 0 : 1;
+}
+
+void keyboardSpecial(int key, int x, int y)
+{
+	if (key == GLUT_KEY_UP) camera_distance -= 0.1;
+	if (key == GLUT_KEY_DOWN) camera_distance += 0.1;
+	if (key == GLUT_KEY_LEFT) camera_longitude -= 10.0;
+	if (key == GLUT_KEY_RIGHT) camera_longitude += 10.0;
 }
 
 int mouse_previous_x, mouse_previous_y;
