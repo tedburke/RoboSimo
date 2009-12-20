@@ -257,6 +257,17 @@ void update()
 		exit(0);
 	}
 	
+	// Insert a short delay here.
+	// The purpose of this is to get this thread to step down
+	// in case it's hogging all the processor time.
+	// This function is registered as the GLUT idle function,
+	// so it should get called very frequently. I observed
+	// that the primary thread hogging the processor in the client
+	// program adversely affected the performace of the robot,
+	// so I inserted short delays in both threads (in the client
+	// and server programs) to make sure neither dominates.
+	Sleep(1);
+	
 	// Calculate time elapsed since last update
 	double tau;
 	clock_t new_time;
