@@ -378,6 +378,11 @@ void display()
 		// Specify perspective projection - fovy, aspect, zNear, zFar
 		gluPerspective(30, 1, 1, 100);
 	}
+
+	// Set up lighting
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_COLOR_MATERIAL);
 	
 	// Render bitmap on arena floor
 	glMatrixMode(GL_MODELVIEW);
@@ -392,6 +397,7 @@ void display()
 	glColor3d(1,1,1);
 	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_QUADS);
+	glNormal3d(0, 0, 1);
 	glTexCoord2f(0.0, 1.0);
 	glVertex3f(-0.7, 0.7, 0.0);
 	glTexCoord2f(1.0, 1.0);
@@ -436,7 +442,7 @@ void display()
 		glScalef(robot[n].l, robot[n].w, robot[n].w);
 		glTranslatef(-0.25, 0.0, 0.0);
 		glRotatef(90.0, 0.0, 1.0, 0.0);
-		glutSolidCone(0.25, 0.5, 4, 4);
+		glutSolidCone(0.25, 0.5, 20, 10);
 	}
 	glDisable(GL_DEPTH_TEST);
 	
