@@ -1,5 +1,6 @@
 //
-// RoboSimo - The RoboSumo simulator - Ted Burke - 26-9-2009
+// RoboSimo - The RoboSumo simulator
+// written by Ted Burke - last updated 17-10-2011
 //
 // Programs written in C can access this simulator over
 // the network and control a virtual robot within the
@@ -46,11 +47,13 @@ GLfloat camera_distance = 4; // distance from centre point of table
 // Global flags
 int fullscreen = 0; // to be set to 1 for fullscreen mode
 
-// Global identifier for arean floor texture
-static GLuint texName;
+// Global identifiers for arena floor and wall textures
+static GLuint texFloorName;
+static GLuint texWallName;
 #define texImageWidth 512
 #define texImageHeight 512
-static GLubyte texImage[texImageHeight][texImageWidth][3];
+static GLubyte texFloorImage[texImageHeight][texImageWidth][3];
+static GLubyte texWallImage[texImageHeight][texImageWidth][3];
 
 // definition for network thread function
 int p1 = 1;
@@ -80,7 +83,7 @@ int main(int argc, char **argv)
 	// Go fullscreen if flag is set
 	if (fullscreen) glutFullScreen();
 	
-	// Register callback functions
+	// Register GLUT callback functions
 	glutIdleFunc(update);
 	glutKeyboardFunc(keyboard);
 	glutSpecialFunc(keyboardSpecial);
@@ -89,38 +92,85 @@ int main(int argc, char **argv)
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
 	
-	// Set the background colour to green
-	glClearColor(0, 1, 0, 0);
+	// Set the background colour to blue
+	glClearColor(0.7, 0.7, 1.0, 1.0);
 	
-	// Load floor pattern from bmp file
-	FILE *texture_file = fopen("floor.bmp", "r");
-	fread(texImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
-	fread(texImage, 3, texImageWidth*texImageHeight, texture_file);
+	// Load wall pattern from bmp file
+	//
+	// NB Wall image is from:
+	//
+	//   http://dsibley.deviantart.com/art/Blue-Grey-Stone-Texture-129579594
+	//
+	FILE *texture_file;
+	texture_file = fopen("wall.bmp", "r");
+	fread(texWallImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
+	fread(texWallImage, 3, texImageWidth*texImageHeight, texture_file);
 	fclose(texture_file);
+	// Load floor pattern from bmp file
+	texture_file = fopen("floor.bmp", "r");
+	fread(texFloorImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
+	fread(texFloorImage, 3, texImageWidth*texImageHeight, texture_file);
+	fclose(texture_file);
+
 	
-	// Convert from BGR to RGB
+	// Convert floor and wall images from BGR to RGB
 	int x, y;
 	GLubyte temp;
 	for (y = 0 ; y < texImageHeight ; ++y)
 	{
 		for (x = 0 ; x < texImageWidth ; ++x)
 		{
-			temp = texImage[y][x][0];
-			texImage[y][x][0] = texImage[y][x][2];
-			texImage[y][x][2] = temp;
+			temp = texFloorImage[y][x][0];
+			texFloorImage[y][x][0] = texFloorImage[y][x][2];
+			texFloorImage[y][x][2] = temp;
+
+			temp = texWallImage[y][x][0];
+			texWallImage[y][x][0] = texWallImage[y][x][2];
+			texWallImage[y][x][2] = temp;
 		}
 	}
 	
+	// Create OpenGL texture for wall
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glGenTextures(1, &texName);
-	glBindTexture(GL_TEXTURE_2D, texName);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glGenTextures(1, &texWallName);
+	glBindTexture(GL_TEXTURE_2D, texWallName);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texImageWidth, texImageHeight,
-					0, GL_RGB, GL_UNSIGNED_BYTE, texImage);
-
+					0, GL_RGB, GL_UNSIGNED_BYTE, texWallImage);
+	
+	// Create OpenGL texture for floor
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glGenTextures(1, &texFloorName);
+	glBindTexture(GL_TEXTURE_2D, texFloorName);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texImageWidth, texImageHeight,
+					0, GL_RGB, GL_UNSIGNED_BYTE, texFloorImage);
+	
+	// Set up lighting
+	// Following suggested setup from http://www.sjbaker.org/steve/omniv/opengl_lighting.html
+	//glShadeModel(GL_SMOOTH);
+	GLfloat light_ambient[] = {0.2, 0.2, 0.2, 1};
+	GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};
+	GLfloat light_specular[] = {1.0, 1.0, 1.0, 1.0};
+	GLfloat global_ambient[] = {0.3, 0.3, 0.3, 1.0};
+	GLfloat material_specular[] = {0.3, 0.3, 0.3, 1.0};
+	GLfloat material_emission[] = {0.1, 0.1, 0.1, 1.0};
+	glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+	glLightModelfv(GL_AMBIENT, global_ambient);
+	glEnable(GL_LIGHT0);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material_specular);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, material_emission);
+	
 	// Initialise robots
 	initialise_robots();
 	
@@ -169,9 +219,6 @@ void initialise_robots()
 		robot[n].AN[7] = 0;
 	}
 		
-	// Random angle offset
-	double max_random_angle_offset = 0;
-	
 	// Load robot_positions.txt to set starting positions
 	FILE *robot_positions_file = fopen("robot_positions.txt", "r");
 	char word[20];
@@ -191,6 +238,10 @@ void initialise_robots()
 		{
 			fscanf(robot_positions_file, "%lf", &robot[0].angle);
 		}
+		else if (strcmp(word, "ROBOT_0_MAX_RANDOM_ANGLE_OFFSET") == 0)
+		{
+			fscanf(robot_positions_file, "%lf", &robot[0].max_random_angle_offset);
+		}
 		else if (strcmp(word, "ROBOT_1_X") == 0)
 		{
 			fscanf(robot_positions_file, "%lf", &robot[1].x);
@@ -203,15 +254,15 @@ void initialise_robots()
 		{
 			fscanf(robot_positions_file, "%lf", &robot[1].angle);
 		}
-		else if (strcmp(word, "MAX_RANDOM_ANGLE_OFFSET") == 0)
+		else if (strcmp(word, "ROBOT_1_MAX_RANDOM_ANGLE_OFFSET") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &max_random_angle_offset);
+			fscanf(robot_positions_file, "%lf", &robot[1].max_random_angle_offset);
 		}
 	}
 
 	// Add random angle offsets
-	robot[0].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
-	robot[1].angle += max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
+	robot[0].angle += robot[0].max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
+	robot[1].angle += robot[1].max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
 
 	fclose(robot_positions_file);
 }
@@ -240,7 +291,7 @@ GLubyte get_colour(GLfloat x, GLfloat y)
 	py = (GLint)(texImageHeight * y);
 	
 	// Finally, calculate and return the average colour component value at that point
-	return (GLubyte)((texImage[py][px][0] + texImage[py][px][1] + texImage[py][px][2]) / 3.0);
+	return (GLubyte)((texFloorImage[py][px][0] + texFloorImage[py][px][1] + texFloorImage[py][px][2]) / 3.0);
 }
 
 void update()
@@ -356,15 +407,16 @@ void reshape(int window_width, int window_height)
 	}
 	
 	// Update position of network address text
-	x_networkAddressText = ortho_left; // NB string starts with a couple of spaces, so ok to place at left edge
-	y_networkAddressText = -0.7;
+	// NB string starts with a couple of spaces, so ok to place at left edge
+	x_networkAddressText = ortho_left;
+	y_networkAddressText = ortho_top - 0.1;
 }
 
 void display()
 {
 	// Clear the background
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+	
 	// Select appropriate projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -372,30 +424,54 @@ void display()
 	{
 		// Specify orthographic projection
 		glOrtho(ortho_left, ortho_right, ortho_bottom, ortho_top, -1, 100);
+		glDisable(GL_LIGHTING);
 	}
 	else
 	{
 		// Specify perspective projection - fovy, aspect, zNear, zFar
 		gluPerspective(30, 1, 1, 100);
+		glEnable(GL_LIGHTING);
 	}
-
-	// Set up lighting
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_COLOR_MATERIAL);
 	
-	// Render bitmap on arena floor
+	// Render bitmaps on arena floor and walls
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(0, 0, camera_distance, 0, 0, 0, 0, 1, 0);
 	if (orthographic_projection == 0)
 	{
-		glRotatef(-camera_latitude, 1, 0, 0);
-		glRotatef(-camera_longitude, 0, 0, 1);
+		glRotatef(-camera_latitude, 1.0, 0.0, 0.0);
+		glRotatef(-camera_longitude, 0.0, 0.0, 1.0);
 	}
 	
-	glColor3d(1,1,1);
+	GLfloat light_position[] = {-2.0, -2.0, 2.0, 0.0};
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+	glEnable(GL_DEPTH_TEST);
+	
+	// Wall bitmaps
+	glBindTexture(GL_TEXTURE_2D, texWallName);
 	glEnable(GL_TEXTURE_2D);
+	glColor4f(1.0, 1.0, 1.0, 1.0);
+	int wall;
+	for (wall=0 ; wall<4 ; ++wall)
+	{
+		glRotatef(90.0, 0.0, 0.0, 1.0);
+		glBegin(GL_QUADS);
+		glNormal3d(0, 1.0, 0);
+		glTexCoord2f(0.0, 1.0);
+		glVertex3f(-0.7, 0.7, 0.0);
+		glTexCoord2f(1.0, 1.0);
+		glVertex3f(0.7, 0.7, 0.0);
+		glTexCoord2f(1.0, 0.0);
+		glVertex3f(0.7, 0.7, -1.4);
+		glTexCoord2f(0.0, 0.0);
+		glVertex3f(-0.7, 0.7, -1.4);
+		glEnd();
+	}
+	
+	// Floor bitmap
+	glColor4f(1.0, 1.0, 1.0, 1.0);
+	glBindTexture(GL_TEXTURE_2D, texFloorName);
 	glBegin(GL_QUADS);
 	glNormal3d(0, 0, 1);
 	glTexCoord2f(0.0, 1.0);
@@ -408,15 +484,15 @@ void display()
 	glVertex3f(-0.7, -0.7, 0.0);
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
-
+	
 	// Draw robots
 	glEnable(GL_DEPTH_TEST);
 	int n;
 	for (n=0 ; n<=1 ; ++n)
 	{
 		// rectangular robot body
-		if (n == 0) glColor3f(1.0, 0.0, 0.0);
-		else glColor3f(0.0, 0.0, 1.0);
+		if (n == 0) glColor4f(1.0, 0.0, 0.0, 1.0);
+		else glColor4f(0.0, 0.0, 1.0, 1.0);
 		glLoadIdentity();
 		gluLookAt(0, 0, camera_distance, 0, 0, 0, 0, 1, 0);
 		if (orthographic_projection == 0)
@@ -445,6 +521,7 @@ void display()
 		glutSolidCone(0.25, 0.5, 20, 10);
 	}
 	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_LIGHTING);
 	
 	// Specify OpenGL projection
 	glMatrixMode(GL_PROJECTION);
@@ -473,8 +550,8 @@ void keyboardSpecial(int key, int x, int y)
 {
 	if (key == GLUT_KEY_UP) camera_distance -= 0.1;
 	if (key == GLUT_KEY_DOWN) camera_distance += 0.1;
-	if (key == GLUT_KEY_LEFT) camera_longitude -= 10.0;
-	if (key == GLUT_KEY_RIGHT) camera_longitude += 10.0;
+	if (key == GLUT_KEY_LEFT) camera_longitude -= 3.0;
+	if (key == GLUT_KEY_RIGHT) camera_longitude += 3.0;
 }
 
 int mouse_previous_x, mouse_previous_y;

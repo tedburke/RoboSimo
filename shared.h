@@ -27,6 +27,7 @@ struct robot_state
 	double x;
 	double y;
 	double angle;
+	double max_random_angle_offset;
 	double v1; // left_wheel_speed;
 	double v2; // right_wheel_speed;
 };
