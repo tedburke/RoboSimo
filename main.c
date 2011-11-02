@@ -1,6 +1,6 @@
 //
 // RoboSimo - The RoboSumo simulator
-// written by Ted Burke - last updated 17-10-2011
+// written by Ted Burke - last updated 2-11-2011
 //
 // Programs written in C can access this simulator over
 // the network and control a virtual robot within the
@@ -35,14 +35,20 @@ clock_t last_time;
 // GLUT window identifier
 static int window;
 
+// Window dimensions
+int window_width = 640;
+int window_height = 400;
+int window_x = 100;
+int window_y = 100;
+
 // Orthographic projection dimensions
 double ortho_left, ortho_right, ortho_bottom, ortho_top;
 GLint orthographic_projection = 0;
 
 // Camera position for perspective view
-GLfloat camera_latitude = 50; // degrees "south" of vertical
+GLfloat camera_latitude = 60; // degrees "south" of vertical
 GLfloat camera_longitude = 0; // degrees "east" of reference point
-GLfloat camera_distance = 4; // distance from centre point of table
+GLfloat camera_distance = 2.6; // distance from centre point of table
 
 // Global flags
 int fullscreen = 0; // to be set to 1 for fullscreen mode
@@ -76,8 +82,8 @@ int main(int argc, char **argv)
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 
-	glutInitWindowSize(640,400);
-	glutInitWindowPosition(100,100);
+	glutInitWindowSize(window_width, window_height);
+	glutInitWindowPosition(window_x, window_y);
 	window = glutCreateWindow("RoboSimo");
 
 	// Go fullscreen if flag is set
@@ -163,12 +169,12 @@ int initialise_scene(int scene_number)
 	// Open floorX.bmp to get floor image
 	char floor_filename[50];
 	sprintf(floor_filename, "floor%d.bmp", scene_number);
-	FILE *floor_file = fopen(floor_filename, "r");
+	FILE *floor_file = fopen(floor_filename, "rb");
 	
 	// Open wall.bmp to get floor image
 	char wall_filename[50];
 	sprintf(wall_filename, "wall.bmp");
-	FILE *wall_file = fopen(wall_filename, "r");
+	FILE *wall_file = fopen(wall_filename, "rb");
 	
 	if (robot_positions_file == NULL || floor_file == NULL || wall_file == NULL)
 	{
@@ -225,41 +231,87 @@ int initialise_scene(int scene_number)
 	}
 		
 	char word[20];
+	double value;
 	while(1)
 	{
-		fscanf(robot_positions_file, "%s", word);
+		if (fscanf(robot_positions_file, "%s", word) != 1)
+		{
+			fprintf(stderr, "Error reading word from file %s\n", robot_positions_filename);
+			break;
+		}
+		
 		if (strcmp(word, "END") == 0) break;
 		else if (strcmp(word, "ROBOT_0_X") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[0].x);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_0_X from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[0].x = value;
 		}
 		else if (strcmp(word, "ROBOT_0_Y") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[0].y);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_0_Y from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[0].y = value;
 		}
 		else if (strcmp(word, "ROBOT_0_ANGLE") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[0].angle);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_0_ANGLE from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[0].angle = value;
 		}
 		else if (strcmp(word, "ROBOT_0_MAX_RANDOM_ANGLE_OFFSET") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[0].max_random_angle_offset);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_0_MAX_RANDOM_ANGLE_OFFSET from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[0].max_random_angle_offset = value;
 		}
 		else if (strcmp(word, "ROBOT_1_X") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[1].x);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_1_X from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[1].x = value;
 		}
 		else if (strcmp(word, "ROBOT_1_Y") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[1].y);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_1_Y from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[1].y = value;
 		}
 		else if (strcmp(word, "ROBOT_1_ANGLE") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[1].angle);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_1_ANGLE from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[1].angle = value;
 		}
 		else if (strcmp(word, "ROBOT_1_MAX_RANDOM_ANGLE_OFFSET") == 0)
 		{
-			fscanf(robot_positions_file, "%lf", &robot[1].max_random_angle_offset);
+			if (fscanf(robot_positions_file, "%lf", &value) != 1)
+			{
+				fprintf(stderr, "Error reading value ROBOT_1_MAX_RANDOM_ANGLE_OFFSET from file %s\n", robot_positions_filename);
+				break;
+			}
+			robot[1].max_random_angle_offset = value;
 		}
 	}
 
@@ -274,12 +326,47 @@ int initialise_scene(int scene_number)
 	//
 	//   http://dsibley.deviantart.com/art/Blue-Grey-Stone-Texture-129579594
 	//
-	fread(texWallImage, 1, 0x36, wall_file); // Read bitmap header - assume it's 0x36 bytes long
-	fread(texWallImage, 3, texImageWidth*texImageHeight, wall_file);
+	// Read bitmap header - assume it's 0x36 bytes long
+	int elements_read;
+	elements_read = fread(texWallImage, 1, 0x36, wall_file);
+	if (elements_read != 0x36)
+	{
+		fprintf(stderr, "Error reading header from file %s\n", wall_filename);
+		fclose(robot_positions_file);
+		fclose(floor_file);
+		fclose(wall_file);
+		return 1;
+	}
+	elements_read = fread(texWallImage, 3, texImageWidth*texImageHeight, wall_file);
+	if (elements_read != texImageWidth*texImageHeight)
+	{
+		fprintf(stderr, "Error reading image data from file %s\n", wall_filename);
+		fclose(robot_positions_file);
+		fclose(floor_file);
+		fclose(wall_file);
+		return 1;
+	}
 	
 	// Load floor pattern from bmp file
-	fread(texFloorImage, 1, 0x36, floor_file); // Read bitmap header - assume it's 0x36 bytes long
-	fread(texFloorImage, 3, texImageWidth*texImageHeight, floor_file);
+	// Read bitmap header - assume it's 0x36 bytes long
+	elements_read = fread(texFloorImage, 1, 0x36, floor_file);
+	if (elements_read != 0x36)
+	{
+		fprintf(stderr, "Error reading header from file %s\n", floor_filename);
+		fclose(robot_positions_file);
+		fclose(floor_file);
+		fclose(wall_file);
+		return 1;
+	}
+	elements_read = fread(texFloorImage, 3, texImageWidth*texImageHeight, floor_file);
+	if (elements_read != texImageWidth*texImageHeight)
+	{
+		fprintf(stderr, "Error reading image data from file %s\n", floor_filename);
+		fclose(robot_positions_file);
+		fclose(floor_file);
+		fclose(wall_file);
+		//return 1;
+	}
 	
 	// Convert floor and wall images from BGR to RGB
 	int x, y;
@@ -432,8 +519,11 @@ void update()
 	glutPostRedisplay();
 }
 
-void reshape(int window_width, int window_height)
+void reshape(int w, int h)
 {
+	window_width = w;
+	window_height = h;
+
 	int text_bar_height = 25;
 	
 	// Set viewport to new window size
@@ -478,7 +568,7 @@ void display()
 	else
 	{
 		// Specify perspective projection - fovy, aspect, zNear, zFar
-		gluPerspective(30, 1, 1, 100);
+		gluPerspective(30, 1.0*window_width/window_height, 1, 100);
 		glEnable(GL_LIGHTING);
 	}
 	

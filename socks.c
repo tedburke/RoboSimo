@@ -1,5 +1,5 @@
 //
-// socks.c - Ted Burke - 27-9-2009
+// socks.c - Ted Burke - 2-11-2011
 //
 // This file contains the network communication thread function for RoboSimo.
 //
@@ -22,7 +22,7 @@
 char network_address_display_string[100] = "Checking network address...";
 
 DWORD WINAPI network_thread(LPVOID lpParameter)
-{	
+{
 	// Retrieve input parameter (indicates whether this thread for player 1 or 2)
 	int player_number = *((int *)lpParameter);
 	
@@ -90,6 +90,10 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 		return 1;
 	}
 
+	// Set the socket to non-blocking mode
+	u_long iMode = 1;
+	iResult = ioctlsocket(ListenSocket, FIONBIO, &iMode);
+	
 	// Setup the TCP listening socket
 	iResult = bind( ListenSocket, result->ai_addr, (int)result->ai_addrlen);
 	if (iResult == SOCKET_ERROR)
@@ -121,45 +125,33 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 		printf("Listening for client on port %s...\n", DEFAULT_PORT_2);
 	}
 	
-	while(1)
+	while(program_exiting == 0)
 	{
 		// Accept a client socket
 		ClientSocket = accept(ListenSocket, NULL, NULL);
-		if (ClientSocket == INVALID_SOCKET) {
-			printf("accept failed: %d\n", WSAGetLastError());
-			closesocket(ListenSocket);
-			WSACleanup();
-			return 1;
+		if (ClientSocket == INVALID_SOCKET)
+		{
+			// Nobody is connecting yet
+			Sleep(1);
+			continue;
 		}
 
-		printf("Got a client\n");
+		printf("A client has connected...\n");
 
-		// No longer need server socket
-		//closesocket(ListenSocket);
-
-		while(1)
+		while(program_exiting == 0)
 		{
 			// Receive data
+			int no_data_count = 0;
 			iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
 			if (iResult > 0)
 			{
-				//printf("Bytes received: %d\n", iResult);
+				no_data_count = 0; // reset no data counter
 				robot[player_number - 1].LATA = recvbuf[0];
 				robot[player_number - 1].LATB = recvbuf[1];
 				robot[player_number - 1].LATC = recvbuf[2];
 				robot[player_number - 1].LATD = recvbuf[3];
 				robot[player_number - 1].CCPR1L = recvbuf[4];
 				robot[player_number - 1].CCPR2L = recvbuf[5];
-			}
-			else if (iResult == 0)
-			{
-				printf("Connection closing...\n");
-				break;
-			}
-			else
-			{
-				printf("Failed to receive data\n");
-				break;
 			}
 			
 			// Send the "sensor readings" back to the client
@@ -178,12 +170,13 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 			iSendResult = send(ClientSocket, sendbuf, sendbuflen, 0);
 			if (iSendResult == SOCKET_ERROR)
 			{
-				printf("send failed: %d\n", WSAGetLastError());
+				//printf("Send failed: %d\n", WSAGetLastError());
 				break;
 			}
 			
-			// Short pause
-			Sleep(20);
+			// Short pause to ensure that this thread doesn't
+			// hog all the processor time
+			Sleep(10);			
 		}
 
 		// Stop robot moving
@@ -194,8 +187,9 @@ DWORD WINAPI network_thread(LPVOID lpParameter)
 		robot[player_number - 1].CCPR1L = 0;
 		robot[player_number - 1].CCPR2L = 0;
 
-		// cleanup
+		// Clean up
 		closesocket(ClientSocket);
+		fprintf(stderr, "Connection closed\n");
 	}
 	
 	closesocket(ListenSocket);
