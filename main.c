@@ -94,42 +94,7 @@ int main(int argc, char **argv)
 	
 	// Set the background colour to blue
 	glClearColor(0.7, 0.7, 1.0, 1.0);
-	
-	// Load wall pattern from bmp file
-	//
-	// NB Wall image is from:
-	//
-	//   http://dsibley.deviantart.com/art/Blue-Grey-Stone-Texture-129579594
-	//
-	FILE *texture_file;
-	texture_file = fopen("wall.bmp", "r");
-	fread(texWallImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
-	fread(texWallImage, 3, texImageWidth*texImageHeight, texture_file);
-	fclose(texture_file);
-	// Load floor pattern from bmp file
-	texture_file = fopen("floor.bmp", "r");
-	fread(texFloorImage, 1, 0x36, texture_file); // Read bitmap header - assume it's 0x36 bytes long
-	fread(texFloorImage, 3, texImageWidth*texImageHeight, texture_file);
-	fclose(texture_file);
 
-	
-	// Convert floor and wall images from BGR to RGB
-	int x, y;
-	GLubyte temp;
-	for (y = 0 ; y < texImageHeight ; ++y)
-	{
-		for (x = 0 ; x < texImageWidth ; ++x)
-		{
-			temp = texFloorImage[y][x][0];
-			texFloorImage[y][x][0] = texFloorImage[y][x][2];
-			texFloorImage[y][x][2] = temp;
-
-			temp = texWallImage[y][x][0];
-			texWallImage[y][x][0] = texWallImage[y][x][2];
-			texWallImage[y][x][2] = temp;
-		}
-	}
-	
 	// Create OpenGL texture for wall
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(1, &texWallName);
@@ -138,8 +103,6 @@ int main(int argc, char **argv)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texImageWidth, texImageHeight,
-					0, GL_RGB, GL_UNSIGNED_BYTE, texWallImage);
 	
 	// Create OpenGL texture for floor
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -149,9 +112,15 @@ int main(int argc, char **argv)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texImageWidth, texImageHeight,
-					0, GL_RGB, GL_UNSIGNED_BYTE, texFloorImage);
 	
+	// Load scene info - floor image and robot positions
+	if (initialise_scene(1) != 0)
+	{
+		// Error occurred loading scene info from files
+		fprintf(stderr, "Error loading scene 1 information from files. Exiting.\n");
+		exit(1);
+	}
+		
 	// Set up lighting
 	// Following suggested setup from http://www.sjbaker.org/steve/omniv/opengl_lighting.html
 	//glShadeModel(GL_SMOOTH);
@@ -170,10 +139,7 @@ int main(int argc, char **argv)
 	glEnable(GL_COLOR_MATERIAL);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, material_specular);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, material_emission);
-	
-	// Initialise robots
-	initialise_robots();
-	
+		
 	// Launch network threads (one for each player, ports 4009 and 4010)
 	hNetworkThread1 = CreateThread(NULL, 0, network_thread, (LPVOID)(&p1), 0, NULL);
 	hNetworkThread2 = CreateThread(NULL, 0, network_thread, (LPVOID)(&p2), 0, NULL);
@@ -187,8 +153,47 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void initialise_robots()
+int initialise_scene(int scene_number)
 {
+	// Open robot_positionsX.txt to set starting positions
+	char robot_positions_filename[50];
+	sprintf(robot_positions_filename, "robot_positions%d.txt", scene_number);
+	FILE *robot_positions_file = fopen(robot_positions_filename, "r");
+	
+	// Open floorX.bmp to get floor image
+	char floor_filename[50];
+	sprintf(floor_filename, "floor%d.bmp", scene_number);
+	FILE *floor_file = fopen(floor_filename, "r");
+	
+	// Open wall.bmp to get floor image
+	char wall_filename[50];
+	sprintf(wall_filename, "wall.bmp");
+	FILE *wall_file = fopen(wall_filename, "r");
+	
+	if (robot_positions_file == NULL || floor_file == NULL || wall_file == NULL)
+	{
+		// Report which file(s) could not be opened
+		if (robot_positions_file == NULL)
+		{
+			fprintf(stderr, "Error opening %s\n", robot_positions_filename);
+		}
+		else fclose(robot_positions_file);
+		
+		if (floor_file == NULL)
+		{
+			fprintf(stderr, "Error opening %s\n", floor_filename);
+		}
+		else fclose(floor_file);
+		
+		if (wall_file == NULL)
+		{
+			fprintf(stderr, "Error opening %s\n", wall_filename);
+		}
+		else fclose(wall_file);
+
+		return 1;
+	}
+	
 	// Initialise robots' states
 	int n;
 	for (n=0 ; n<2 ; ++n)
@@ -219,8 +224,6 @@ void initialise_robots()
 		robot[n].AN[7] = 0;
 	}
 		
-	// Load robot_positions.txt to set starting positions
-	FILE *robot_positions_file = fopen("robot_positions.txt", "r");
 	char word[20];
 	while(1)
 	{
@@ -264,7 +267,53 @@ void initialise_robots()
 	robot[0].angle += robot[0].max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
 	robot[1].angle += robot[1].max_random_angle_offset * (2 * (rand() / (double)RAND_MAX) - 1);
 
+	// Load floor image from file
+	// Load wall pattern from bmp file
+	//
+	// NB Wall image is from:
+	//
+	//   http://dsibley.deviantart.com/art/Blue-Grey-Stone-Texture-129579594
+	//
+	fread(texWallImage, 1, 0x36, wall_file); // Read bitmap header - assume it's 0x36 bytes long
+	fread(texWallImage, 3, texImageWidth*texImageHeight, wall_file);
+	
+	// Load floor pattern from bmp file
+	fread(texFloorImage, 1, 0x36, floor_file); // Read bitmap header - assume it's 0x36 bytes long
+	fread(texFloorImage, 3, texImageWidth*texImageHeight, floor_file);
+	
+	// Convert floor and wall images from BGR to RGB
+	int x, y;
+	GLubyte temp;
+	for (y = 0 ; y < texImageHeight ; ++y)
+	{
+		for (x = 0 ; x < texImageWidth ; ++x)
+		{
+			temp = texFloorImage[y][x][0];
+			texFloorImage[y][x][0] = texFloorImage[y][x][2];
+			texFloorImage[y][x][2] = temp;
+
+			temp = texWallImage[y][x][0];
+			texWallImage[y][x][0] = texWallImage[y][x][2];
+			texWallImage[y][x][2] = temp;
+		}
+	}
+	
+	// Create OpenGL texture for wall
+	glBindTexture(GL_TEXTURE_2D, texWallName);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texImageWidth, texImageHeight,
+					0, GL_RGB, GL_UNSIGNED_BYTE, texWallImage);
+	
+	// Create OpenGL texture for floor
+	glBindTexture(GL_TEXTURE_2D, texFloorName);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texImageWidth, texImageHeight,
+					0, GL_RGB, GL_UNSIGNED_BYTE, texFloorImage);
+	
+	// Close files
 	fclose(robot_positions_file);
+	fclose(floor_file);
+	fclose(wall_file);
+	
+	return 0;
 }
 
 // This function obtains the background colour (actually intensity between 0 and 255)
@@ -542,7 +591,10 @@ void display()
 void keyboard(unsigned char key, int x, int y)
 {
 	if (key == 'q') program_exiting = 1; // Set exiting flag
-	if (key == ' ') initialise_robots();
+	if (key == '1') initialise_scene(1);
+	if (key == '2') initialise_scene(2);
+	if (key == '3') initialise_scene(3);
+	if (key == '4') initialise_scene(4);
 	if (key == 'v') orthographic_projection = (orthographic_projection) ? 0 : 1;
 }
 
